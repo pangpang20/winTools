@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>计时器浮窗</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+    body { color: #f4f6fb; font-family: 'Segoe UI', 'Microsoft YaHei UI', sans-serif; }
+    .widget { width: 100%; height: 100%; padding: 13px 18px; border: 1px solid rgba(255,255,255,.17); border-radius: 8px; display: flex; flex-direction: column; justify-content: space-between; background: #161b25; box-shadow: 0 12px 32px rgba(0,0,0,.35); }
+    .top { display: flex; align-items: center; justify-content: space-between; gap: 10px; -webkit-app-region: drag; }
+    .mode { color: #9ba5b5; font-size: 11px; font-weight: 600; }
+    .actions { display: flex; gap: 5px; -webkit-app-region: no-drag; }
+    button { width: 26px; height: 26px; padding: 0; border: 0; border-radius: 5px; color: #c4cedb; background: rgba(255,255,255,.07); cursor: pointer; font-size: 16px; }
+    button:hover { color: #fff; background: rgba(255,255,255,.17); }
+    .time { width: 100%; overflow: hidden; color: #f4f6fb; font-family: Consolas, 'Courier New', monospace; font-size: min(var(--size, 96px), 20vh); line-height: 1; text-align: center; white-space: nowrap; }
+    .footer { display: flex; justify-content: space-between; color: #788496; font-size: 10px; -webkit-app-region: drag; }
+  </style>
+</head>
+<body>
+  <div class="widget">
+    <div class="top">
+      <span class="mode" id="mode">计时器 · 秒表</span>
+      <div class="actions">
+        <button id="play" type="button" aria-label="开始或暂停" title="开始或暂停">▶</button>
+        <button id="close" type="button" aria-label="关闭浮窗" title="关闭浮窗">×</button>
+      </div>
+    </div>
+    <div class="time" id="time">00:00:00</div>
+    <div class="footer"><span id="status">准备就绪</span><span>拖动此窗口可移动</span></div>
+  </div>
+  <script src="widget.js"></script>
+</body>
+</html>

@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0b0d12" />
+    <title>桌面工具箱</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="titlebar">
+        <div class="brand titlebar-drag">
+          <div class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></div>
+          <div class="brand-copy">
+            <strong>桌面工具箱</strong>
+            <span>轻量 · 专注 · 随手可用</span>
+          </div>
+        </div>
+        <div class="window-actions" aria-label="窗口操作">
+          <button class="icon-button window-button no-drag" id="minimizeButton" type="button" title="最小化" aria-label="最小化">−</button>
+          <button class="icon-button window-button close-button no-drag" id="closeButton" type="button" title="关闭" aria-label="关闭">×</button>
+        </div>
+      </header>
+
+      <div class="workspace">
+        <aside class="sidebar">
+          <div class="sidebar-heading">工具</div>
+          <nav class="tool-nav" aria-label="工具列表">
+            <button class="tool-nav-item active" type="button" data-tool="timer" aria-current="page">
+              <span class="nav-icon timer-icon" aria-hidden="true"></span>
+              <span class="nav-label">计时器</span>
+              <span class="nav-active-dot" aria-hidden="true"></span>
+            </button>
+            <button class="tool-nav-item" type="button" data-tool="pomodoro"><span class="nav-icon timer-icon" aria-hidden="true"></span><span class="nav-label">番茄钟</span></button>
+            <button class="tool-nav-item" type="button" data-tool="notes"><span class="nav-icon grid-icon" aria-hidden="true"></span><span class="nav-label">快速便签</span></button>
+            <button class="tool-nav-item" type="button" data-tool="clipboard"><span class="nav-icon grid-icon" aria-hidden="true"></span><span class="nav-label">剪贴板</span></button>
+            <button class="tool-nav-item" type="button" data-tool="capture"><span class="nav-icon grid-icon" aria-hidden="true"></span><span class="nav-label">截图取色</span></button>
+            <button class="tool-nav-item" type="button" data-tool="converter"><span class="nav-icon grid-icon" aria-hidden="true"></span><span class="nav-label">转换器</span></button>
+            <button class="tool-nav-item" type="button" data-tool="reminders"><span class="nav-icon timer-icon" aria-hidden="true"></span><span class="nav-label">闹钟提醒</span></button>
+            <button class="tool-nav-item" type="button" data-tool="qr"><span class="nav-icon grid-icon" aria-hidden="true"></span><span class="nav-label">二维码</span></button>
+            <button class="tool-nav-item" type="button" data-tool="tts"><span class="nav-icon timer-icon" aria-hidden="true"></span><span class="nav-label">文本朗读</span></button>
+            <button class="tool-nav-item" type="button" data-tool="windowPin"><span class="nav-icon grid-icon" aria-hidden="true"></span><span class="nav-label">窗口置顶</span></button>
+            <button class="tool-nav-item" type="button" data-tool="settings"><span class="nav-icon grid-icon" aria-hidden="true"></span><span class="nav-label">快捷键设置</span></button>
+          </nav>
+
+          <div class="sidebar-footer">
+            <div class="status-orb" aria-hidden="true"></div>
+            <div>
+              <span class="status-label">本地运行</span>
+              <span class="status-subtitle">无需账号，设置自动保存</span>
+            </div>
+          </div>
+        </aside>
+
+        <main class="main-content">
+          <section class="page-heading">
+            <div>
+              <p class="eyebrow">专注工具 / 01</p>
+              <h1 id="pageTitle">计时器</h1>
+              <p class="page-description" id="pageDescription">把时间放在桌面上，专注当前这一件事。</p>
+            </div>
+            <div class="heading-actions">
+              <button class="utility-button" id="widgetButton" type="button" title="打开桌面计时浮窗">
+                <span aria-hidden="true">▣</span>
+                <span id="widgetButtonLabel">桌面浮窗</span>
+              </button>
+              <button class="utility-button" id="resetButton" type="button" title="重置计时器">
+                <span class="reset-icon" aria-hidden="true">↻</span>
+                <span>重置</span>
+              </button>
+              <button class="primary-button" id="startButton" type="button">
+                <span class="play-icon" aria-hidden="true">▶</span>
+                <span id="startButtonLabel">开始计时</span>
+              </button>
+            </div>
+          </section>
+
+          <section class="timer-layout tool-view" id="timerView" aria-label="计时器工作区">
+            <article class="timer-card">
+              <div class="timer-card-topline">
+                <div class="mode-switch" role="tablist" aria-label="计时模式">
+                  <button class="mode-button active" id="stopwatchMode" type="button" role="tab" aria-selected="true">秒表</button>
+                  <button class="mode-button" id="countdownMode" type="button" role="tab" aria-selected="false">倒计时</button>
+                </div>
+                <span class="running-state" id="runningState"><i></i>准备就绪</span>
+              </div>
+
+              <div class="timer-display-wrap">
+                <div class="timer-display" id="timerDisplay" aria-live="polite">00:00:00</div>
+                <div class="timer-unit-labels" aria-hidden="true"><span>时</span><span>分</span><span>秒</span></div>
+              </div>
+
+              <div class="timer-progress" aria-hidden="true"><span id="progressBar"></span></div>
+
+              <div class="timer-card-bottom">
+                <div class="elapsed-meta">
+                  <span class="meta-label" id="timerMetaLabel">累计时长</span>
+                  <strong id="timerMetaValue">00:00:00</strong>
+                </div>
+                <div class="shortcut-hint"><kbd>Space</kbd><span>开始 / 暂停</span></div>
+              </div>
+            </article>
+
+            <aside class="settings-panel" aria-label="显示设置">
+              <div class="panel-heading">
+                <div>
+                  <p class="panel-kicker">显示设置</p>
+                  <h2>自定义外观</h2>
+                </div>
+                <span class="settings-icon" aria-hidden="true">✦</span>
+              </div>
+
+              <div class="setting-row topmost-row">
+                <div class="setting-copy">
+                  <strong>窗口置顶</strong>
+                  <span>始终显示在其他窗口上方</span>
+                </div>
+                <label class="switch">
+                  <input id="alwaysOnTop" type="checkbox" />
+                  <span class="switch-track"><span></span></span>
+                </label>
+              </div>
+
+              <div class="setting-group">
+                <div class="setting-label-row"><label for="opacityRange">窗口透明度</label><output id="opacityValue">100%</output></div>
+                <input id="opacityRange" class="range-input" type="range" min="50" max="100" value="100" step="1" />
+              </div>
+
+              <div class="setting-group">
+                <div class="setting-label-row"><label for="fontSizeRange">时间字号</label><output id="fontSizeValue">96 px</output></div>
+                <input id="fontSizeRange" class="range-input" type="range" min="56" max="144" value="96" step="2" />
+              </div>
+
+              <div class="setting-group color-group">
+                <div class="setting-label-row"><span>时间颜色</span><output id="colorValue">极夜白</output></div>
+                <div class="color-options" role="radiogroup" aria-label="时间颜色">
+                  <button class="color-swatch selected" type="button" data-color="#f4f6fb" data-name="极夜白" aria-label="极夜白" style="--swatch:#f4f6fb"></button>
+                  <button class="color-swatch" type="button" data-color="#7dd3fc" data-name="晴空蓝" aria-label="晴空蓝" style="--swatch:#7dd3fc"></button>
+                  <button class="color-swatch" type="button" data-color="#a7f3d0" data-name="薄荷绿" aria-label="薄荷绿" style="--swatch:#a7f3d0"></button>
+                  <button class="color-swatch" type="button" data-color="#fcd34d" data-name="琥珀黄" aria-label="琥珀黄" style="--swatch:#fcd34d"></button>
+                  <button class="color-swatch" type="button" data-color="#fda4af" data-name="珊瑚粉" aria-label="珊瑚粉" style="--swatch:#fda4af"></button>
+                </div>
+              </div>
+
+              <div class="panel-note"><span class="note-icon">i</span><span>设置会自动保存，下次打开继续使用。</span></div>
+            </aside>
+          </section>
+
+          <section class="quick-start tool-view" id="quickStartView">
+            <div class="quick-start-copy"><span class="quick-icon">⌁</span><div><strong>准备开始一段专注时间？</strong><span>按空格键即可快速开始或暂停。</span></div></div>
+            <div class="quick-presets" aria-label="快捷时长">
+              <button class="preset-button" type="button" data-minutes="5">05 分钟</button>
+              <button class="preset-button" type="button" data-minutes="15">15 分钟</button>
+              <button class="preset-button" type="button" data-minutes="25">25 分钟</button>
+            </div>
+          </section>
+
+          <section class="generic-view" id="pomodoroView" hidden><div class="view-grid"><article class="feature-card focus-card"><div class="feature-eyebrow">FOCUS CYCLE</div><h2>番茄钟</h2><div class="pomodoro-time" id="pomodoroTime">25:00</div><div class="pomodoro-actions"><button class="primary-button" id="pomodoroStart" type="button">开始专注</button><button class="utility-button" id="pomodoroReset" type="button">重置</button></div><div class="cycle-dots" id="cycleDots"><i class="on"></i><i></i><i></i><i></i></div></article><article class="feature-card"><div class="card-heading"><h3>今日专注</h3><span id="focusCount">0 轮</span></div><div class="stat-number" id="focusMinutes">0</div><div class="muted-copy">分钟专注时间</div><div class="preset-line"><button class="preset-button pomodoro-preset" data-min="25" type="button">25 分钟</button><button class="preset-button pomodoro-preset" data-min="50" type="button">50 分钟</button></div></article></div></section>
+          <section class="generic-view" id="notesView" hidden><div class="section-toolbar"><div><p class="eyebrow">QUICK NOTES</p><h2>快速便签</h2></div><div class="toolbar-actions"><button class="utility-button" id="openAllNotesButton" type="button">▣ 全部弹出</button><button class="primary-button" id="newNoteButton" type="button">＋ 新建便签</button></div></div><div class="notes-grid" id="notesGrid"></div></section>
+          <section class="generic-view" id="clipboardView" hidden><div class="section-toolbar"><div><p class="eyebrow">CLIPBOARD HISTORY</p><h2>剪贴板历史</h2></div><div class="toolbar-actions"><label class="compact-switch"><input id="clipboardEnabled" type="checkbox" checked><span></span><b>监听中</b></label><button class="utility-button" id="clearClipboard" type="button">清空未固定</button></div></div><div class="search-field"><span>⌕</span><input id="clipboardSearch" placeholder="搜索剪贴板内容" /></div><div class="clipboard-list" id="clipboardList"></div></section>
+          <section class="generic-view" id="captureView" hidden><div class="section-toolbar"><div><p class="eyebrow">CAPTURE & COLOR</p><h2>截图与取色</h2></div><button class="primary-button" id="captureScreenButton" type="button">⌗ 截取当前屏幕</button></div><div class="capture-grid"><article class="feature-card capture-preview" id="capturePreview"><div class="empty-state"><span class="empty-icon">◌</span><strong>还没有截图</strong><span>截图会在这里预览</span></div></article><article class="feature-card color-tool"><h3>取色器</h3><p class="muted-copy">选择一个颜色，复制不同格式</p><div class="color-picker-row"><input id="colorPickerInput" type="color" value="#7DD3FC"><span>点击色块选择颜色</span></div><div class="color-preview" id="largeColorPreview"></div><div class="color-values"><button class="value-copy" data-format="hex" type="button">HEX <b id="hexValue">#7DD3FC</b></button><button class="value-copy" data-format="rgb" type="button">RGB <b id="rgbValue">125, 211, 252</b></button></div></article></div></section>
+          <section class="generic-view" id="converterView" hidden><div class="section-toolbar"><div><p class="eyebrow">QUICK CONVERTER</p><h2>转换器</h2></div><select id="converterType" class="select-input"><option value="length">长度</option><option value="weight">重量</option><option value="temperature">温度</option><option value="timestamp">时间戳</option><option value="size">文件大小</option></select></div><div class="converter-card feature-card"><div class="converter-row"><input id="converterInput" class="big-input" value="1" type="number"><select id="converterFrom" class="select-input"></select></div><div class="conversion-arrow">↓</div><div class="converter-row"><output id="converterOutput" class="big-output">100</output><select id="converterTo" class="select-input"></select></div></div></section>
+          <section class="generic-view" id="remindersView" hidden><div class="section-toolbar"><div><p class="eyebrow">REMINDERS</p><h2>闹钟与提醒</h2></div></div><div class="reminder-card feature-card"><div class="reminder-form"><input id="reminderMessage" class="text-input" placeholder="提醒内容，例如：站起来走走" /><input id="reminderMinutes" class="text-input small-input" type="number" min="1" value="25" /><span>分钟后提醒</span><button class="primary-button" id="addReminder" type="button">添加提醒</button></div><div id="reminderList" class="reminder-list"></div></div></section>
+          <section class="generic-view" id="qrView" hidden><div class="section-toolbar"><div><p class="eyebrow">QR TOOLS</p><h2>二维码</h2></div></div><div class="qr-layout"><article class="feature-card"><textarea id="qrText" class="qr-input" placeholder="输入文本、网址或联系方式"></textarea><button class="primary-button" id="generateQr" type="button">生成二维码</button></article><article class="feature-card qr-output" id="qrOutput"><div class="empty-state"><span class="empty-icon">⌗</span><strong>等待生成</strong><span>二维码会显示在这里</span></div></article></div></section>
+          <section class="generic-view" id="ttsView" hidden><div class="section-toolbar"><div><p class="eyebrow">TEXT TO SPEECH</p><h2>文本朗读</h2></div><button class="primary-button" id="openSpeechFile" type="button">＋ 打开 TXT / DOCX</button></div><div class="tts-layout"><article class="feature-card tts-editor"><div class="tts-file-row"><span id="speechFileName">未选择文件</span><span id="speechCharCount">0 字</span></div><textarea id="speechText" class="speech-text" placeholder="也可以直接粘贴或输入文本..."></textarea></article><article class="feature-card tts-controls"><div class="tts-status" id="speechStatus"><i></i>准备朗读</div><label>语音<select id="speechVoice" class="select-input"></select></label><label>语速<output id="speechRateValue">1.0x</output><input id="speechRate" class="range-input" type="range" min="0.5" max="2" value="1" step="0.1"></label><label>音调<output id="speechPitchValue">1.0</output><input id="speechPitch" class="range-input" type="range" min="0" max="2" value="1" step="0.1"></label><div class="tts-actions"><button class="primary-button" id="speechPlay" type="button">▶ 开始朗读</button><button class="utility-button" id="speechStop" type="button">停止</button></div></article></div></section>
+          <section class="generic-view" id="windowPinView" hidden><div class="section-toolbar"><div><p class="eyebrow">WINDOW PINNING</p><h2>窗口置顶</h2></div><button class="utility-button" id="refreshWindowList" type="button">刷新列表</button></div><div class="window-pin-list" id="windowList" aria-live="polite"></div></section>
+          <section class="generic-view" id="settingsView" hidden><div class="section-toolbar"><div><p class="eyebrow">PREFERENCES</p><h2>快捷键与设置</h2></div></div><div class="settings-list feature-card" id="shortcutSettings"></div></section>
+        </main>
+      </div>
+    </div>
+    <script src="renderer.js"></script>
+  </body>
+</html>

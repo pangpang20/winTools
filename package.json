@@ -1,0 +1,91 @@
+{
+  "name": "zhuomiantools",
+  "version": "0.1.0",
+  "description": "Windows 11 desktop toolbox with a customizable timer widget",
+  "main": "src/main.js",
+  "author": "zhuomiantools",
+  "license": "MIT",
+  "dependencies": {
+    "mammoth": "^1.9.0",
+    "qrcode": "^1.5.4"
+  },
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron .",
+    "test": "node --test test/*.test.js",
+    "dist": "electron-builder --win",
+    "dist:dir": "electron-builder --win dir"
+  },
+  "devDependencies": {
+    "electron": "^38.8.6",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.zhuomiantools.toolbox",
+    "productName": "桌面工具箱",
+    "artifactName": "桌面工具箱-${version}-${os}-${arch}.${ext}",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "src/**/*",
+      "package.json",
+      "node_modules/qrcode/**/*",
+      "node_modules/mammoth/**/*",
+      "node_modules/@xmldom/xmldom/**/*",
+      "node_modules/argparse/**/*",
+      "node_modules/base64-js/**/*",
+      "node_modules/bluebird/**/*",
+      "node_modules/dingbat-to-unicode/**/*",
+      "node_modules/jszip/**/*",
+      "node_modules/lop/**/*",
+      "node_modules/path-is-absolute/**/*",
+      "node_modules/underscore/**/*",
+      "node_modules/xmlbuilder/**/*",
+      "node_modules/dijkstrajs/**/*",
+      "node_modules/pngjs/**/*",
+      "node_modules/yargs/**/*",
+      "node_modules/y18n/**/*",
+      "node_modules/cliui/**/*",
+      "node_modules/string-width/**/*",
+      "node_modules/emoji-regex/**/*",
+      "node_modules/strip-ansi/**/*",
+      "node_modules/wrap-ansi/**/*",
+      "node_modules/decamelize/**/*",
+      "node_modules/find-up/**/*",
+      "node_modules/get-caller-file/**/*",
+      "node_modules/require-directory/**/*",
+      "node_modules/require-main-filename/**/*",
+      "node_modules/set-blocking/**/*",
+      "node_modules/which-module/**/*",
+      "node_modules/yargs-parser/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "dir",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "桌面工具箱"
+    }
+  },
+  "allowScripts": {
+    "electron@38.8.6": true,
+    "electron-winstaller": true
+  }
+}
