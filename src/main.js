@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const QRCode = require('qrcode');
 const mammoth = require('mammoth');
 const { createExternalWindowService } = require('./external-windows');
+const { findWindowSource, withWindowThumbnails } = require('./window-thumbnails');
 
 let mainWindow;
 let widgetWindow;
@@ -96,6 +97,21 @@ function registerShortcuts(nextShortcuts = shortcuts) {
   shortcuts = { ...defaultShortcuts, ...nextShortcuts }; writeData(); return { ok: true, shortcuts };
 }
 function captureScreen() { return desktopCapturer.getSources({ types: ['screen'], thumbnailSize: screen.getPrimaryDisplay().size }).then((sources) => sources[0]?.thumbnail?.toDataURL() || null); }
+async function listExternalWindowsWithThumbnails() {
+  const windows = await externalWindows.list();
+  try {
+    const sources = await desktopCapturer.getSources({ types: ['window'], thumbnailSize: { width: 240, height: 135 } });
+    return withWindowThumbnails(windows, sources);
+  } catch (error) {
+    console.error('Failed to capture window thumbnails', error);
+    return windows.map((window) => ({ ...window, thumbnail: null }));
+  }
+}
+async function previewExternalWindow(handle) {
+  if (typeof handle !== 'string' || !(await externalWindows.list()).some((window) => window.handle === handle)) throw new Error('窗口已关闭，请刷新列表');
+  const sources = await desktopCapturer.getSources({ types: ['window'], thumbnailSize: { width: 1280, height: 800 } });
+  return findWindowSource(sources, handle)?.thumbnail.toDataURL() || null;
+}
 
 app.whenReady().then(() => { readData(); pruneClipboard(); writeData(); createWindow(); watchClipboard(); registerShortcuts(shortcuts); app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); }); });
 app.on('will-quit', () => { externalWindows.release(); globalShortcut.unregisterAll(); clearInterval(clipboardTimer); });
@@ -106,7 +122,8 @@ ipcMain.handle('window:set-opacity', (_event, value) => { const opacity = Math.m
 ipcMain.on('window:minimize', () => mainWindow?.minimize());
 ipcMain.on('window:close', () => mainWindow?.close());
 ipcMain.handle('window:is-always-on-top', () => widgetAlwaysOnTop);
-ipcMain.handle('external-windows:list', () => externalWindows.list());
+ipcMain.handle('external-windows:list', listExternalWindowsWithThumbnails);
+ipcMain.handle('external-windows:preview', (_event, handle) => previewExternalWindow(handle));
 ipcMain.handle('external-windows:toggle-pin', (_event, { handle, enabled }) => externalWindows.toggle(handle, enabled));
 
 ipcMain.handle('widget:toggle', () => {

@@ -11,6 +11,7 @@ let pomodoroRunning = false;
 let pomodoroLastTick = 0;
 let pomodoroFrame = 0;
 let currentTool = 'timer';
+let windowPreviewRequest = 0;
 
 const $ = (id) => document.getElementById(id);
 const timerDisplay = $('timerDisplay');
@@ -74,6 +75,18 @@ function selectTool(tool) {
   if (tool === 'notes') renderNotes(); if (tool === 'clipboard') renderClipboard(); if (tool === 'converter') setupConverter(); if (tool === 'windowPin') renderExternalWindows(); if (tool === 'settings') renderShortcuts();
 }
 
+async function openWindowPreview(item) {
+  const dialog = $('windowPreviewDialog');
+  const request = ++windowPreviewRequest;
+  $('windowPreviewTitle').textContent = item.title;
+  $('windowPreviewImage').src = item.thumbnail;
+  dialog.showModal();
+  try {
+    const image = await window.desktopAPI.previewExternalWindow(item.handle);
+    if (dialog.open && request === windowPreviewRequest && image) $('windowPreviewImage').src = image;
+  } catch (error) { if (dialog.open && request === windowPreviewRequest) toast(error.message || '无法获取窗口预览'); }
+}
+
 async function renderExternalWindows() {
   const list = $('windowList');
   list.textContent = '正在获取窗口...';
@@ -85,6 +98,16 @@ async function renderExternalWindows() {
     if (!windows.length) { list.innerHTML = '<div class="empty-state"><strong>没有可操作的窗口</strong><span>打开目标程序后刷新列表</span></div>'; return; }
     for (const item of windows) {
       const row = document.createElement('div'); row.className = 'window-pin-row';
+      const preview = document.createElement('button'); preview.className = 'window-pin-thumbnail'; preview.type = 'button';
+      if (item.thumbnail) {
+        const image = document.createElement('img'); image.src = item.thumbnail; image.alt = '';
+        preview.appendChild(image); preview.title = '放大查看窗口';
+        preview.setAttribute('aria-label', `放大查看 ${item.title} 的窗口缩略图`);
+        preview.addEventListener('click', () => openWindowPreview(item));
+      } else {
+        preview.textContent = '无法预览'; preview.disabled = true;
+        preview.setAttribute('aria-label', `${item.title} 无法预览`);
+      }
       const details = document.createElement('div'); details.className = 'window-pin-details';
       const title = document.createElement('strong'); title.className = 'window-pin-title'; title.textContent = item.title;
       const process = document.createElement('span'); process.className = 'window-pin-process'; process.textContent = `${item.processName} · PID ${item.processId}`;
@@ -96,7 +119,7 @@ async function renderExternalWindows() {
         try { await window.desktopAPI.toggleExternalWindowPin(item.handle, !item.topmost); toast(item.topmost ? '已取消置顶' : '窗口已置顶'); await renderExternalWindows(); }
         catch (error) { toast(error.message || '窗口操作失败'); action.disabled = false; }
       });
-      row.append(details, action); list.appendChild(row);
+      row.append(preview, details, action); list.appendChild(row);
     }
   } catch (error) { list.textContent = error.message || '获取窗口失败'; }
   finally { $('refreshWindowList').disabled = false; }
@@ -130,6 +153,9 @@ function pomodoroTick(timestamp) { if (!pomodoroRunning) return; if (!pomodoroLa
 
 document.querySelectorAll('[data-tool]').forEach((button) => button.addEventListener('click', () => selectTool(button.dataset.tool)));
 $('refreshWindowList').addEventListener('click', renderExternalWindows);
+$('closeWindowPreview').addEventListener('click', () => $('windowPreviewDialog').close());
+$('windowPreviewDialog').addEventListener('close', (event) => { if (!event.target.open) windowPreviewRequest++; });
+$('windowPreviewDialog').addEventListener('click', (event) => { if (event.target === $('windowPreviewDialog')) event.target.close(); });
 startButton.addEventListener('click', () => setRunning(!state.running)); $('resetButton').addEventListener('click', () => { setRunning(false); state.elapsedMs = 0; state.countdownMs = 25 * 60 * 1000; saveTimer(); renderTimer(); });
 stopwatchMode.addEventListener('click', () => switchMode('stopwatch')); countdownMode.addEventListener('click', () => switchMode('countdown'));
 opacityRange.addEventListener('input', async (event) => { state.opacity = Number(event.target.value); await window.desktopAPI.setOpacity(state.opacity / 100); renderTimer(); saveTimer(); });

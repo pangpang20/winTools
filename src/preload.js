@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld('desktopAPI', {
   setOpacity: (value) => ipcRenderer.invoke('window:set-opacity', value),
   isAlwaysOnTop: () => ipcRenderer.invoke('window:is-always-on-top'),
   listExternalWindows: () => ipcRenderer.invoke('external-windows:list'),
+  previewExternalWindow: (handle) => ipcRenderer.invoke('external-windows:preview', handle),
   toggleExternalWindowPin: (handle, enabled) => ipcRenderer.invoke('external-windows:toggle-pin', { handle, enabled }),
   minimize: () => ipcRenderer.send('window:minimize'),
   close: () => ipcRenderer.send('window:close'),
