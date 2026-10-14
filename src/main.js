@@ -38,7 +38,7 @@ function send(channel, payload) { if (mainWindow && !mainWindow.isDestroyed()) m
 
 function createWindow() {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize;
-  mainWindow = new BrowserWindow({ width: Math.min(1200, Math.max(1020, width - 120)), height: Math.min(820, Math.max(680, height - 90)), minWidth: 980, minHeight: 640, show: false, frame: false, backgroundColor: '#0b0d12', titleBarStyle: 'hidden', resizable: true, webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true } });
+  mainWindow = new BrowserWindow({ width: Math.min(width, 1200, Math.max(640, width - 120)), height: Math.min(height, 820, Math.max(480, height - 90)), minWidth: Math.min(640, width), minHeight: Math.min(480, height), show: false, frame: false, backgroundColor: '#0b0d12', titleBarStyle: 'hidden', resizable: true, webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, sandbox: true } });
   mainWindow.loadFile(path.join(__dirname, 'index.html'));
   mainWindow.once('ready-to-show', () => mainWindow.show());
   mainWindow.on('closed', () => { mainWindow = null; });
