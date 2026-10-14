@@ -5,6 +5,7 @@ const QRCode = require('qrcode');
 const mammoth = require('mammoth');
 const { createExternalWindowService } = require('./external-windows');
 const { findWindowSource, withWindowThumbnails } = require('./window-thumbnails');
+const { createPortService } = require('./ports');
 
 let mainWindow;
 let widgetWindow;
@@ -16,6 +17,7 @@ let clipboardEnabled = true;
 let clipboardHistory = [];
 const reminderTimers = new Map();
 const externalWindows = createExternalWindowService();
+const ports = createPortService();
 const defaultShortcuts = { showToolbox: 'Control+Alt+Space', startTimer: 'Control+Alt+T', newNote: 'Control+Alt+N', openClipboard: 'Control+Alt+V', screenshot: 'Control+Alt+A', colorPicker: 'Control+Alt+C' };
 let shortcuts = { ...defaultShortcuts };
 
@@ -125,6 +127,18 @@ ipcMain.handle('window:is-always-on-top', () => widgetAlwaysOnTop);
 ipcMain.handle('external-windows:list', listExternalWindowsWithThumbnails);
 ipcMain.handle('external-windows:preview', (_event, handle) => previewExternalWindow(handle));
 ipcMain.handle('external-windows:toggle-pin', (_event, { handle, enabled }) => externalWindows.toggle(handle, enabled));
+ipcMain.handle('ports:list', async () => {
+  if (process.env.PORTS_TEST_ERROR_FILE) {
+    try {
+      const simulated = JSON.parse(fs.readFileSync(process.env.PORTS_TEST_ERROR_FILE, 'utf8'));
+      if (simulated.delayMs) await new Promise((resolve) => setTimeout(resolve, simulated.delayMs));
+      if (simulated.error) throw new Error(simulated.error);
+    } catch (error) {
+      if (error.code !== 'ENOENT') throw error;
+    }
+  }
+  return ports.list();
+});
 
 ipcMain.handle('widget:toggle', () => {
   if (widgetWindow) { widgetWindow.close(); return false; }

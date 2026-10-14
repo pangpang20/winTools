@@ -12,6 +12,10 @@ let pomodoroLastTick = 0;
 let pomodoroFrame = 0;
 let currentTool = 'timer';
 let windowPreviewRequest = 0;
+let portItems = [];
+let portsLoading = false;
+let portsError = '';
+let portsUpdatedAt = '';
 
 const $ = (id) => document.getElementById(id);
 const timerDisplay = $('timerDisplay');
@@ -68,11 +72,54 @@ function switchMode(mode) { if (state.running) setRunning(false); state.mode = m
 
 function selectTool(tool) {
   currentTool = tool;
-  const titles = { timer: ['计时器', '把时间放在桌面上，专注当前这一件事。'], pomodoro: ['番茄钟', '用清晰的专注周期，保持节奏。'], notes: ['快速便签', '把临时想法留在桌面，稍后再处理。'], clipboard: ['剪贴板历史', '找回最近复制过的文本。'], capture: ['截图与取色', '快速截取屏幕，提取需要的颜色。'], converter: ['转换器', '常用单位与时间格式即时换算。'], reminders: ['闹钟与提醒', '把要记住的事交给桌面。'], qr: ['二维码', '生成可分享的文本二维码。'], tts: ['文本朗读', '把 TXT 和 DOCX 文件转换成语音播放。'], windowPin: ['窗口置顶', '选择一个窗口，让它始终显示在最前端。'], settings: ['快捷键设置', '为常用工具配置全局快捷键。'] };
+  const titles = { timer: ['计时器', '把时间放在桌面上，专注当前这一件事。'], pomodoro: ['番茄钟', '用清晰的专注周期，保持节奏。'], notes: ['快速便签', '把临时想法留在桌面，稍后再处理。'], clipboard: ['剪贴板历史', '找回最近复制过的文本。'], capture: ['截图与取色', '快速截取屏幕，提取需要的颜色。'], converter: ['转换器', '常用单位与时间格式即时换算。'], reminders: ['闹钟与提醒', '把要记住的事交给桌面。'], qr: ['二维码', '生成可分享的文本二维码。'], tts: ['文本朗读', '把 TXT 和 DOCX 文件转换成语音播放。'], windowPin: ['窗口置顶', '选择一个窗口，让它始终显示在最前端。'], ports: ['端口进程', '查看 Windows 正在监听的端口及对应程序路径。'], settings: ['快捷键设置', '为常用工具配置全局快捷键。'] };
   $('pageTitle').textContent = titles[tool][0]; $('pageDescription').textContent = titles[tool][1];
   document.querySelectorAll('[data-tool]').forEach((button) => { const active = button.dataset.tool === tool; button.classList.toggle('active', active); button.toggleAttribute('aria-current', active); });
   document.querySelectorAll('.tool-view, .generic-view').forEach((view) => { const visible = tool === 'timer' ? ['timerView', 'quickStartView'].includes(view.id) : view.id === `${tool}View`; view.hidden = !visible; });
-  if (tool === 'notes') renderNotes(); if (tool === 'clipboard') renderClipboard(); if (tool === 'converter') setupConverter(); if (tool === 'windowPin') renderExternalWindows(); if (tool === 'settings') renderShortcuts();
+  if (tool === 'notes') renderNotes(); if (tool === 'clipboard') renderClipboard(); if (tool === 'converter') setupConverter(); if (tool === 'windowPin') renderExternalWindows(); if (tool === 'ports') loadPorts(); if (tool === 'settings') renderShortcuts();
+}
+
+function renderPorts() {
+  const list = $('portList');
+  list.replaceChildren();
+  $('portTableWrap').setAttribute('aria-busy', String(portsLoading));
+  if (portsLoading || portsError) {
+    const message = portsLoading ? '正在获取端口和进程路径，请稍候…' : `${portsError}。请点击“刷新列表”重试。`;
+    $('portStatus').textContent = portsLoading ? '正在查询…' : '获取失败';
+    showPortMessage(message, Boolean(portsError));
+    return;
+  }
+  const query = $('portSearch').value.trim();
+  const direction = $('portSort').value;
+  const factor = direction === 'desc' ? -1 : 1;
+  const items = portItems.filter((item) => !query || String(item.port).includes(query)).sort((a, b) => (a.port - b.port) * factor || a.protocol.localeCompare(b.protocol) || a.address.localeCompare(b.address));
+  $('portStatus').textContent = `显示 ${items.length} / ${portItems.length} 条记录${portsUpdatedAt ? ` · 更新于 ${portsUpdatedAt}` : ''}`;
+  if (!items.length) { showPortMessage(query ? '没有匹配的端口，请修改或清空搜索内容。' : '未发现 TCP 监听端口或 UDP 绑定端口。'); return; }
+  for (const item of items) {
+    const row = document.createElement('tr');
+    const cells = [item.protocol, item.address, String(item.port), item.protocol === 'TCP' ? '监听' : '已绑定', item.processId == null ? '未知' : String(item.processId), item.processName, item.path || '无法读取（系统 / 权限不足 / 已退出）'];
+    cells.forEach((value, index) => { const cell = document.createElement('td'); cell.textContent = value; if (index === 2) cell.className = 'port-number'; if (index === 6) { cell.className = 'port-path'; cell.title = value; } row.appendChild(cell); });
+    list.appendChild(row);
+  }
+}
+
+function showPortMessage(message, error = false) {
+  const row = document.createElement('tr');
+  const cell = document.createElement('td');
+  cell.colSpan = 7; cell.className = error ? 'port-empty port-error' : 'port-empty'; cell.textContent = message;
+  row.appendChild(cell); $('portList').appendChild(row);
+}
+
+async function loadPorts() {
+  if (portsLoading) return;
+  const refresh = $('refreshPorts');
+  portsLoading = true; portsError = ''; refresh.disabled = true; renderPorts();
+  try {
+    portItems = await window.desktopAPI.listPorts();
+    portsUpdatedAt = new Date().toLocaleTimeString();
+  } catch (error) {
+    portItems = []; portsError = error.message || '获取端口失败';
+  } finally { portsLoading = false; refresh.disabled = false; renderPorts(); }
 }
 
 async function openWindowPreview(item) {
@@ -153,6 +200,9 @@ function pomodoroTick(timestamp) { if (!pomodoroRunning) return; if (!pomodoroLa
 
 document.querySelectorAll('[data-tool]').forEach((button) => button.addEventListener('click', () => selectTool(button.dataset.tool)));
 $('refreshWindowList').addEventListener('click', renderExternalWindows);
+$('refreshPorts').addEventListener('click', loadPorts);
+$('portSearch').addEventListener('input', renderPorts);
+$('portSort').addEventListener('change', renderPorts);
 $('closeWindowPreview').addEventListener('click', () => $('windowPreviewDialog').close());
 $('windowPreviewDialog').addEventListener('close', (event) => { if (!event.target.open) windowPreviewRequest++; });
 $('windowPreviewDialog').addEventListener('click', (event) => { if (event.target === $('windowPreviewDialog')) event.target.close(); });

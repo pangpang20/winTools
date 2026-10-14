@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld('desktopAPI', {
   listExternalWindows: () => ipcRenderer.invoke('external-windows:list'),
   previewExternalWindow: (handle) => ipcRenderer.invoke('external-windows:preview', handle),
   toggleExternalWindowPin: (handle, enabled) => ipcRenderer.invoke('external-windows:toggle-pin', { handle, enabled }),
+  listPorts: () => ipcRenderer.invoke('ports:list'),
   minimize: () => ipcRenderer.send('window:minimize'),
   close: () => ipcRenderer.send('window:close'),
   toggleWidget: () => ipcRenderer.invoke('widget:toggle'),

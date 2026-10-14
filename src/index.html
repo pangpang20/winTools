@@ -41,6 +41,7 @@
             <button class="tool-nav-item" type="button" data-tool="qr"><span class="nav-icon grid-icon" aria-hidden="true"></span><span class="nav-label">二维码</span></button>
             <button class="tool-nav-item" type="button" data-tool="tts"><span class="nav-icon timer-icon" aria-hidden="true"></span><span class="nav-label">文本朗读</span></button>
             <button class="tool-nav-item" type="button" data-tool="windowPin"><span class="nav-icon grid-icon" aria-hidden="true"></span><span class="nav-label">窗口置顶</span></button>
+            <button class="tool-nav-item" type="button" data-tool="ports"><span class="nav-icon grid-icon" aria-hidden="true"></span><span class="nav-label">端口进程</span></button>
             <button class="tool-nav-item" type="button" data-tool="settings"><span class="nav-icon grid-icon" aria-hidden="true"></span><span class="nav-label">快捷键设置</span></button>
           </nav>
 
@@ -165,6 +166,16 @@
           <section class="generic-view" id="qrView" hidden><div class="section-toolbar"><div><p class="eyebrow">QR TOOLS</p><h2>二维码</h2></div></div><div class="qr-layout"><article class="feature-card"><textarea id="qrText" class="qr-input" placeholder="输入文本、网址或联系方式"></textarea><button class="primary-button" id="generateQr" type="button">生成二维码</button></article><article class="feature-card qr-output" id="qrOutput"><div class="empty-state"><span class="empty-icon">⌗</span><strong>等待生成</strong><span>二维码会显示在这里</span></div></article></div></section>
           <section class="generic-view" id="ttsView" hidden><div class="section-toolbar"><div><p class="eyebrow">TEXT TO SPEECH</p><h2>文本朗读</h2></div><button class="primary-button" id="openSpeechFile" type="button">＋ 打开 TXT / DOCX</button></div><div class="tts-layout"><article class="feature-card tts-editor"><div class="tts-file-row"><span id="speechFileName">未选择文件</span><span id="speechCharCount">0 字</span></div><textarea id="speechText" class="speech-text" placeholder="也可以直接粘贴或输入文本..."></textarea></article><article class="feature-card tts-controls"><div class="tts-status" id="speechStatus"><i></i>准备朗读</div><label>语音<select id="speechVoice" class="select-input"></select></label><label>语速<output id="speechRateValue">1.0x</output><input id="speechRate" class="range-input" type="range" min="0.5" max="2" value="1" step="0.1"></label><label>音调<output id="speechPitchValue">1.0</output><input id="speechPitch" class="range-input" type="range" min="0" max="2" value="1" step="0.1"></label><div class="tts-actions"><button class="primary-button" id="speechPlay" type="button">▶ 开始朗读</button><button class="utility-button" id="speechStop" type="button">停止</button></div></article></div></section>
           <section class="generic-view" id="windowPinView" hidden><div class="section-toolbar"><div><p class="eyebrow">WINDOW PINNING</p><h2>窗口置顶</h2></div><button class="utility-button" id="refreshWindowList" type="button">刷新列表</button></div><div class="window-pin-list" id="windowList" aria-live="polite"></div></section>
+          <section class="generic-view" id="portsView" hidden>
+            <div class="section-toolbar"><div><p class="eyebrow">LISTENING PORTS</p><h2>端口进程</h2></div><button class="utility-button" id="refreshPorts" type="button">刷新列表</button></div>
+            <div class="ports-toolbar">
+              <div class="search-field"><span aria-hidden="true">⌕</span><input id="portSearch" type="search" inputmode="numeric" placeholder="按端口号搜索，如 8080 或 80" aria-label="按端口号搜索" aria-describedby="portHelp"></div>
+              <label class="port-sort-label">排序<select id="portSort" class="select-input"><option value="asc">端口号升序</option><option value="desc">端口号降序</option></select></label>
+            </div>
+            <p class="port-help" id="portHelp">搜索匹配端口号中包含的数字。TCP 显示监听端口，UDP 显示已绑定端口，包含 IPv4 和 IPv6。系统、受保护或已退出的进程可能无法读取程序路径。</p>
+            <div class="port-status" id="portStatus" role="status" aria-live="polite"></div>
+            <div class="port-table-wrap" id="portTableWrap" aria-busy="false"><table class="port-table" aria-label="监听端口与进程路径"><thead><tr><th scope="col">协议</th><th scope="col">本地地址</th><th scope="col">端口</th><th scope="col">状态</th><th scope="col">PID</th><th scope="col">进程</th><th scope="col">程序路径</th></tr></thead><tbody id="portList"></tbody></table></div>
+          </section>
           <section class="generic-view" id="settingsView" hidden><div class="section-toolbar"><div><p class="eyebrow">PREFERENCES</p><h2>快捷键与设置</h2></div></div><div class="settings-list feature-card" id="shortcutSettings"></div></section>
         </main>
       </div>
