@@ -3,25 +3,31 @@ const { test } = require('node:test');
 const net = require('node:net');
 const dgram = require('node:dgram');
 const path = require('node:path');
-const { execFile } = require('node:child_process');
+const { execFile, spawn } = require('node:child_process');
 const { queryScript, parsePortOutput, createPortService } = require('../src/ports');
 
-const sample = { Protocol: 'TCP', Address: '127.0.0.1', Port: 8080, ProcessId: 42, ProcessName: '测试进程', Path: 'C:\\测试目录\\程序.exe' };
+const sample = { Protocol: 'TCP', Address: '127.0.0.1', Port: 8080, ProcessId: 42, ProcessName: '测试进程', Path: 'C:\\测试目录\\程序.exe', CommandLine: '"C:\\测试目录\\程序.exe" --name "中文 参数"  --port=8080' };
 
-test('parses arrays and single rows, preserving protocol, address, PID and Unicode path', () => {
-  const expected = { protocol: 'TCP', address: '127.0.0.1', port: 8080, processId: 42, processName: '测试进程', path: sample.Path };
+test('parses arrays and single rows, preserving Unicode paths and full command lines', () => {
+  const expected = { protocol: 'TCP', address: '127.0.0.1', port: 8080, processId: 42, processName: '测试进程', path: sample.Path, commandLine: sample.CommandLine };
   assert.deepEqual(parsePortOutput(JSON.stringify(sample)), [expected]);
   assert.deepEqual(parsePortOutput(JSON.stringify([sample, { ...sample, Protocol: 'udp', Address: '::', Path: null }])), [expected, { ...expected, protocol: 'UDP', address: '::', path: null }]);
   assert.deepEqual(parsePortOutput('[]'), []);
   assert.deepEqual(parsePortOutput(''), []);
 });
 
-test('keeps endpoints whose process path or PID cannot be read', () => {
+test('keeps endpoints whose process path, PID or command line cannot be read', () => {
   const [row] = parsePortOutput(JSON.stringify({ ...sample, Path: '', ProcessId: null, ProcessName: '' }));
   assert.equal(row.port, 8080);
   assert.equal(row.path, null);
   assert.equal(row.processId, null);
   assert.equal(row.processName, '未知进程');
+  for (const CommandLine of [null, undefined, '', '  ']) {
+    const [endpoint] = parsePortOutput(JSON.stringify({ ...sample, CommandLine }));
+    assert.equal(endpoint.port, sample.Port);
+    assert.equal(endpoint.path, sample.Path);
+    assert.equal(endpoint.commandLine, null);
+  }
 });
 
 test('rejects malformed JSON and excludes invalid endpoints', () => {
@@ -72,7 +78,7 @@ test('real PowerShell permits empty results and propagates missing commands', { 
   await assert.rejects(executePowerShell(queryScript.replace('Get-NetTCPConnection -State Listen', 'MissingPortQueryCommand')));
 });
 
-test('real Windows scan resolves TCP/UDP IPv4/IPv6 ports to PID and executable path', { skip: process.platform !== 'win32', timeout: 30000 }, async (t) => {
+test('real Windows scan resolves TCP/UDP IPv4/IPv6 ports to PID, path and command line', { skip: process.platform !== 'win32', timeout: 30000 }, async (t) => {
   const endpoints = [];
   for (const address of ['127.0.0.1', '::1']) {
     const tcp = net.createServer();
@@ -90,5 +96,46 @@ test('real Windows scan resolves TCP/UDP IPv4/IPv6 ports to PID and executable p
     assert.ok(row, `endpoint is listed: ${JSON.stringify(endpoint)}`);
     assert.equal(path.normalize(row.path).toLowerCase(), path.normalize(process.execPath).toLowerCase());
     assert.ok(row.processName);
+    assert.ok(row.commandLine.toLowerCase().includes(process.execPath.toLowerCase()));
+    assert.ok(row.commandLine.includes(path.basename(__filename)));
   }
+});
+
+test('real Windows scan preserves child process startup arguments', { skip: process.platform !== 'win32', timeout: 30000 }, async (t) => {
+  const code = 'require("node:net").createServer().listen(0,"127.0.0.1",function(){console.log(this.address().port)})';
+  const child = spawn(process.execPath, ['-e', code, '--', '--label=中文 空格 "引号"', '--literal=<img src=x>'], { windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+  t.after(async () => {
+    if (!child.pid || child.exitCode !== null || child.signalCode !== null) return;
+    const exited = new Promise((resolve) => child.once('exit', resolve));
+    child.kill();
+    await exited;
+  });
+  const port = await new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('child listener did not start')), 5000);
+    let output = '';
+    child.once('error', (error) => { clearTimeout(timer); reject(error); });
+    child.once('exit', (code) => { clearTimeout(timer); reject(new Error(`child exited: ${code}`)); });
+    child.stdout.on('data', (chunk) => { output += chunk; if (output.includes('\n')) { clearTimeout(timer); resolve(Number(output.trim())); } });
+  });
+  const rows = await createPortService().list();
+  const row = rows.find((item) => item.protocol === 'TCP' && item.port === port && item.processId === child.pid);
+  assert.ok(row, 'child TCP listener is present');
+  assert.equal(row.path.toLowerCase(), process.execPath.toLowerCase());
+  assert.ok(row.commandLine.includes('--label=中文 空格'));
+  assert.ok(row.commandLine.includes('引号'));
+  assert.ok(row.commandLine.includes('--literal=<img src=x>'));
+});
+
+test('unavailable CIM command lines keep readable endpoint and process information', { skip: process.platform !== 'win32', timeout: 30000 }, async (t) => {
+  const tcp = net.createServer();
+  t.after(() => new Promise((resolve) => tcp.close(resolve)));
+  await new Promise((resolve, reject) => { tcp.once('error', reject); tcp.listen(0, '127.0.0.1', resolve); });
+  let calls = 0;
+  const script = `function Get-CimInstance { $script:commandLineQueries++; throw 'CIM query denied' }\n$script:commandLineQueries = 0\n${queryScript}\nif ($script:commandLineQueries -ne 1) { throw 'command lines must be queried once per scan' }`;
+  const rows = await createPortService({ execute: async () => { calls++; return executePowerShell(script); } }).list();
+  const row = rows.find((item) => item.protocol === 'TCP' && item.port === tcp.address().port && item.processId === process.pid);
+  assert.equal(calls, 1);
+  assert.ok(row, 'CIM failure does not discard the endpoint');
+  assert.equal(row.path.toLowerCase(), process.execPath.toLowerCase());
+  assert.equal(row.commandLine, null);
 });

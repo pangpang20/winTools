@@ -4,6 +4,11 @@ const queryScript = String.raw`
 $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false)
 $processCache = @{}
+$commandLines = @{}
+try {
+  Get-CimInstance -ClassName Win32_Process -Property ProcessId,CommandLine -ErrorAction Stop |
+    ForEach-Object { $commandLines[[int]$_.ProcessId] = $_.CommandLine }
+} catch { }
 function Convert-PortRow($endpoint, $protocol) {
   $ownerId = [int]$endpoint.OwningProcess
   if (!$processCache.ContainsKey($ownerId)) {
@@ -18,7 +23,7 @@ function Convert-PortRow($endpoint, $protocol) {
   $info = $processCache[$ownerId]
   [pscustomobject]@{
     Protocol = $protocol; Address = [string]$endpoint.LocalAddress; Port = [int]$endpoint.LocalPort
-    ProcessId = $ownerId; ProcessName = $info.Name; Path = $info.Path
+    ProcessId = $ownerId; ProcessName = $info.Name; Path = $info.Path; CommandLine = $commandLines[$ownerId]
   }
 }
 $rows = @()
@@ -45,7 +50,7 @@ function normalizePort(item) {
   const protocol = String(item.Protocol || '').toUpperCase();
   if (protocol !== 'TCP' && protocol !== 'UDP') return null;
   const processId = Number.isInteger(item.ProcessId) && item.ProcessId >= 0 ? item.ProcessId : null;
-  return { protocol, address: String(item.Address || '*'), port: item.Port, processId, processName: String(item.ProcessName || '未知进程'), path: item.Path ? String(item.Path) : null };
+  return { protocol, address: String(item.Address || '*'), port: item.Port, processId, processName: String(item.ProcessName || '未知进程'), path: item.Path ? String(item.Path) : null, commandLine: typeof item.CommandLine === 'string' && item.CommandLine.trim() ? item.CommandLine : null };
 }
 
 function parsePortOutput(output) {

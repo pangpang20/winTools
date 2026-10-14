@@ -74,14 +74,16 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
 .port-help { color: var(--muted); font-size: 12px; line-height: 1.7; margin: 14px 0 10px; }
 .port-status { min-height: 30px; color: var(--muted); font-size: 12px; }
 .port-table-wrap { overflow: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
-.port-table { width: 100%; min-width: 670px; border-collapse: collapse; table-layout: fixed; font-size: 12px; }
+.port-table { width: 100%; min-width: 1080px; border-collapse: collapse; table-layout: fixed; font-size: 12px; }
 .port-table th, .port-table td { padding: 12px 10px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; line-height: 1.65; }
 .port-table th { color: var(--muted); background: var(--panel-raised); font-weight: 600; }
-.port-table th:nth-child(1) { width: 7%; }.port-table th:nth-child(2) { width: 18%; }.port-table th:nth-child(3) { width: 9%; }.port-table th:nth-child(4) { width: 10%; }.port-table th:nth-child(5) { width: 9%; }.port-table th:nth-child(6) { width: 14%; }.port-table th:nth-child(7) { width: 33%; }
+.port-table th:nth-child(1) { width: 6%; }.port-table th:nth-child(2) { width: 13%; }.port-table th:nth-child(3) { width: 7%; }.port-table th:nth-child(4) { width: 8%; }.port-table th:nth-child(5) { width: 7%; }.port-table th:nth-child(6) { width: 11%; }.port-table th:nth-child(7) { width: 21%; }.port-table th:nth-child(8) { width: 27%; }
 .port-table tbody tr:hover { background: var(--panel-soft); }
 .port-table tbody tr:last-child td { border-bottom: 0; }
 .port-number { color: var(--accent); font-family: 'DM Mono', monospace; font-weight: 600; }
-.port-path { color: var(--muted); user-select: text; }
+.port-path, .port-command-line { color: var(--muted); user-select: text; }
+.port-command-line { white-space: pre-wrap; }
+.port-table-wrap:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .port-table .port-empty { padding: 36px 20px; color: var(--muted); text-align: center; }
 .port-table .port-error { color: #fca5a5; }
 #refreshPorts:disabled { opacity: .55; cursor: wait; }

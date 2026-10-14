@@ -85,21 +85,38 @@ test('port tool queries real IPC, searches ports, sorts numerically and refreshe
   const owner = rows.find((item) => item.protocol === 'TCP' && item.port === tcpPort && item.processId === process.pid);
   assert.ok(owner, 'real TCP listener and PID are loaded through IPC');
   assert.equal(owner.path.toLowerCase(), process.execPath.toLowerCase());
-  assert.ok(await evaluate("[...document.querySelectorAll('#portList tr')].every(row => row.children.length === 7)"));
+  assert.ok(owner.commandLine.toLowerCase().includes(process.execPath.toLowerCase()));
+  assert.ok(owner.commandLine.includes(path.basename(__filename)));
+  assert.ok(await evaluate("[...document.querySelectorAll('#portList tr')].every(row => row.children.length === 8)"));
+  assert.deepEqual(await evaluate("[...document.querySelectorAll('.port-table th')].slice(-2).map(cell => cell.textContent)"), ['程序路径', '命令行']);
+  await evaluate(`document.querySelector('#portSearch').value = '${tcpPort}'; document.querySelector('#portSearch').dispatchEvent(new Event('input'))`);
+  assert.ok(await evaluate(`document.querySelectorAll('#portList .port-number').length > 0 && [...document.querySelectorAll('#portList .port-number')].every(cell => cell.textContent.includes('${tcpPort}'))`));
+  assert.ok(await evaluate(`[...document.querySelectorAll('#portList tr')].some(row => row.children[4].textContent === '${process.pid}' && row.children[7].textContent === ${JSON.stringify(owner.commandLine)} && row.children[7].title === ${JSON.stringify(owner.commandLine)})`));
+  await evaluate("document.querySelector('#portSearch').value = 'no-port'; document.querySelector('#portSearch').dispatchEvent(new Event('input'))");
+  assert.match(await evaluate("document.querySelector('#portList').textContent"), /没有匹配/);
+  assert.equal(await evaluate("document.querySelector('#portList td').colSpan"), 8);
+
+  // Stable data exposes lexicographic mistakes that a random machine's ports might miss.
+  const longCommand = '"C:\\测试目录\\程序.exe" --name "中文 参数"  --literal="<img src=x>" --config=' + '很长的配置目录/'.repeat(35);
+  await evaluate(`portItems = [1000, 80, 443, 9].map(port => ({ protocol: 'TCP', address: '::1', port, processId: 42, processName: '<img src=x>', path: null, commandLine: port === 9 ? ${JSON.stringify(longCommand)} : null })); document.querySelector('#portSearch').value = ''; document.querySelector('#portSearch').dispatchEvent(new Event('input'))`);
+  assert.deepEqual(await evaluate("[...document.querySelectorAll('.port-number')].map(cell => Number(cell.textContent))"), [9, 80, 443, 1000]);
+  assert.equal(await evaluate("document.querySelectorAll('#portList img').length"), 0);
+  assert.match(await evaluate("document.querySelector('.port-path').textContent"), /无法读取/);
+  assert.equal(await evaluate("document.querySelector('.port-command-line').textContent"), longCommand);
+  assert.equal(await evaluate("document.querySelector('.port-command-line').title"), longCommand);
+  assert.match(await evaluate("document.querySelectorAll('.port-command-line')[1].textContent"), /无法读取/);
+  assert.equal(await evaluate("getComputedStyle(document.querySelector('.port-command-line')).userSelect"), 'text');
+  assert.equal(await evaluate("getComputedStyle(document.querySelector('.port-command-line')).whiteSpace"), 'pre-wrap');
+  assert.equal(await evaluate("getComputedStyle(document.querySelector('.port-command-line')).overflowWrap"), 'anywhere');
+  assert.equal(await evaluate("document.querySelector('#portTableWrap').tabIndex"), 0);
+  assert.equal(await evaluate("getComputedStyle(document.querySelector('#portTableWrap')).overflowX"), 'auto');
+  assert.ok(await evaluate("(() => { const selection = getSelection(); selection.selectAllChildren(document.querySelector('.port-command-line')); return selection.toString() === document.querySelector('.port-command-line').textContent; })()"));
+  await evaluate("getSelection().removeAllRanges(); document.querySelector('#portTableWrap').scrollLeft = 10000");
+  assert.ok(await evaluate("document.querySelector('#portTableWrap').scrollLeft > 0"));
   if (process.env.PORTS_SCREENSHOT) {
     const shot = await call('Page.captureScreenshot', { format: 'png', fromSurface: true });
     fs.writeFileSync(process.env.PORTS_SCREENSHOT, Buffer.from(shot.data, 'base64'));
   }
-  await evaluate(`document.querySelector('#portSearch').value = '${tcpPort}'; document.querySelector('#portSearch').dispatchEvent(new Event('input'))`);
-  assert.ok(await evaluate(`document.querySelectorAll('#portList .port-number').length > 0 && [...document.querySelectorAll('#portList .port-number')].every(cell => cell.textContent.includes('${tcpPort}'))`));
-  await evaluate("document.querySelector('#portSearch').value = 'no-port'; document.querySelector('#portSearch').dispatchEvent(new Event('input'))");
-  assert.match(await evaluate("document.querySelector('#portList').textContent"), /没有匹配/);
-
-  // Stable data exposes lexicographic mistakes that a random machine's ports might miss.
-  await evaluate(`portItems = [1000, 80, 443, 9].map(port => ({ protocol: 'TCP', address: '::1', port, processId: 42, processName: '<img src=x>', path: null })); document.querySelector('#portSearch').value = ''; document.querySelector('#portSearch').dispatchEvent(new Event('input'))`);
-  assert.deepEqual(await evaluate("[...document.querySelectorAll('.port-number')].map(cell => Number(cell.textContent))"), [9, 80, 443, 1000]);
-  assert.equal(await evaluate("document.querySelectorAll('#portList img').length"), 0);
-  assert.match(await evaluate("document.querySelector('.port-path').textContent"), /无法读取/);
   await evaluate("document.querySelector('#portSort').value = 'desc'; document.querySelector('#portSort').dispatchEvent(new Event('change'))");
   assert.deepEqual(await evaluate("[...document.querySelectorAll('.port-number')].map(cell => Number(cell.textContent))"), [1000, 443, 80, 9]);
   await evaluate("document.querySelector('#portSearch').value = '0'; document.querySelector('#portSearch').dispatchEvent(new Event('input'))");
@@ -126,8 +143,10 @@ test('port UI preserves loading and safe errors during filtering and recovers on
   await evaluate(`document.querySelector('[data-tool="ports"]').click(); document.querySelector('#portSearch').value = '80'; document.querySelector('#portSearch').dispatchEvent(new Event('input')); document.querySelector('#portSort').value = 'desc'; document.querySelector('#portSort').dispatchEvent(new Event('change')); loadPorts()`);
   assert.equal(await evaluate("document.querySelector('#portTableWrap').getAttribute('aria-busy')"), 'true');
   assert.match(await evaluate("document.querySelector('#portList').textContent"), /正在获取/);
+  assert.equal(await evaluate("document.querySelector('#portList td').colSpan"), 8);
   await waitFor("!document.querySelector('#refreshPorts').disabled");
   assert.match(await evaluate("document.querySelector('#portList').textContent"), /查询失败/);
+  assert.equal(await evaluate("document.querySelector('#portList td').colSpan"), 8);
   assert.equal(await evaluate("document.querySelectorAll('#portList img').length"), 0);
   await evaluate("document.querySelector('#portSearch').value = ''; document.querySelector('#portSearch').dispatchEvent(new Event('input'))");
   assert.match(await evaluate("document.querySelector('#portList').textContent"), /查询失败/);

@@ -174,9 +174,9 @@
               <div class="search-field"><span aria-hidden="true">⌕</span><input id="portSearch" type="search" inputmode="numeric" placeholder="按端口号搜索，如 8080 或 80" aria-label="按端口号搜索" aria-describedby="portHelp"></div>
               <label class="port-sort-label">排序<select id="portSort" class="select-input"><option value="asc">端口号升序</option><option value="desc">端口号降序</option></select></label>
             </div>
-            <p class="port-help" id="portHelp">搜索匹配端口号中包含的数字。TCP 显示监听端口，UDP 显示已绑定端口，包含 IPv4 和 IPv6。系统、受保护或已退出的进程可能无法读取程序路径。</p>
+            <p class="port-help" id="portHelp">搜索匹配端口号中包含的数字。TCP 显示监听端口，UDP 显示已绑定端口，包含 IPv4 和 IPv6。系统、受保护或已退出的进程可能无法读取程序路径或命令行。长文本可选中复制，表格可左右滚动。</p>
             <div class="port-status" id="portStatus" role="status" aria-live="polite"></div>
-            <div class="port-table-wrap" id="portTableWrap" aria-busy="false"><table class="port-table" aria-label="监听端口与进程路径"><thead><tr><th scope="col">协议</th><th scope="col">本地地址</th><th scope="col">端口</th><th scope="col">状态</th><th scope="col">PID</th><th scope="col">进程</th><th scope="col">程序路径</th></tr></thead><tbody id="portList"></tbody></table></div>
+            <div class="port-table-wrap" id="portTableWrap" aria-busy="false" tabindex="0" aria-label="端口列表，可左右滚动"><table class="port-table" aria-label="监听端口、进程路径与命令行"><thead><tr><th scope="col">协议</th><th scope="col">本地地址</th><th scope="col">端口</th><th scope="col">状态</th><th scope="col">PID</th><th scope="col">进程</th><th scope="col">程序路径</th><th scope="col">命令行</th></tr></thead><tbody id="portList"></tbody></table></div>
           </section>
           <section class="generic-view" id="settingsView" hidden><div class="section-toolbar"><div><p class="eyebrow">PREFERENCES</p><h2>快捷键与设置</h2></div></div><div class="settings-list feature-card" id="shortcutSettings"></div></section>
         </main>
