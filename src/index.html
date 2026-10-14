@@ -19,7 +19,18 @@
           </div>
         </div>
         <div class="window-actions" aria-label="窗口操作">
-          <button class="theme-button no-drag" id="themeToggle" type="button" aria-label="切换为浅色主题" title="切换为浅色主题"><span id="themeIcon" aria-hidden="true">☀</span><span id="themeLabel">浅色</span></button>
+          <div class="theme-picker no-drag" id="themePicker">
+            <button class="theme-button" id="themeToggle" type="button" aria-label="选择主题，当前深夜" aria-expanded="false" aria-controls="themeMenu" title="选择主题">
+              <span class="theme-current-swatch" id="themeIcon" aria-hidden="true"></span><span id="themeLabel">深夜</span><span class="theme-chevron" aria-hidden="true">⌄</span>
+            </button>
+            <div class="theme-menu" id="themeMenu" role="group" aria-label="选择主题" hidden>
+              <button class="theme-option" type="button" data-theme-option="dark" aria-pressed="true"><span class="theme-option-swatch theme-swatch-dark" aria-hidden="true"></span><span>深夜</span><span class="theme-selected" aria-hidden="true">✓</span></button>
+              <button class="theme-option" type="button" data-theme-option="light" aria-pressed="false"><span class="theme-option-swatch theme-swatch-light" aria-hidden="true"></span><span>明亮</span><span class="theme-selected" aria-hidden="true">✓</span></button>
+              <button class="theme-option" type="button" data-theme-option="forest" aria-pressed="false"><span class="theme-option-swatch theme-swatch-forest" aria-hidden="true"></span><span>森林</span><span class="theme-selected" aria-hidden="true">✓</span></button>
+              <button class="theme-option" type="button" data-theme-option="coral" aria-pressed="false"><span class="theme-option-swatch theme-swatch-coral" aria-hidden="true"></span><span>珊瑚</span><span class="theme-selected" aria-hidden="true">✓</span></button>
+              <button class="theme-option" type="button" data-theme-option="graphite" aria-pressed="false"><span class="theme-option-swatch theme-swatch-graphite" aria-hidden="true"></span><span>石墨</span><span class="theme-selected" aria-hidden="true">✓</span></button>
+            </div>
+          </div>
           <button class="icon-button window-button no-drag" id="minimizeButton" type="button" title="最小化" aria-label="最小化">−</button>
           <button class="icon-button window-button close-button no-drag" id="closeButton" type="button" title="关闭" aria-label="关闭">×</button>
         </div>

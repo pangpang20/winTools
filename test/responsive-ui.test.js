@@ -178,7 +178,7 @@ function measureLayout() {
   };
 }
 
-test('all twelve tool panels adapt to native resizing, narrow and wide viewports in both themes', { skip: process.platform !== 'win32', timeout: 120000 }, async t => {
+test('all twelve tool panels adapt to native resizing, narrow and wide viewports in five themes', { skip: process.platform !== 'win32', timeout: 300000 }, async t => {
   const { call, evaluate, waitFor, resizeNative } = await openToolbox(t);
   await evaluate(`(${installFixtures.toString()})()`);
   const tools = await evaluate("[...document.querySelectorAll('[data-tool]')].map(button => button.dataset.tool)");
@@ -199,11 +199,11 @@ test('all twelve tool panels adapt to native resizing, narrow and wide viewports
     const shot = await call('Page.captureScreenshot', { format: 'png', fromSurface: true });
     fs.writeFileSync(path.join(process.env.RESPONSIVE_SCREENSHOTS, name + '.png'), Buffer.from(shot.data, 'base64'));
   };
-  for (const theme of ['dark', 'light']) {
+  for (const theme of ['dark', 'light', 'forest', 'coral', 'graphite']) {
     for (const [width, height] of [[640, 480], [980, 640], [1200, 820], [1920, 1080]]) {
       await t.test(`${theme} ${width} x ${height}: twelve panels and every action fit`, async () => {
         await call('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false });
-        await evaluate(`document.documentElement.dataset.theme = '${theme}'`);
+        await evaluate(`document.querySelector('#themeToggle').click(); document.querySelector('[data-theme-option="${theme}"]').click()`);
         for (const tool of tools) {
           await evaluate(`document.querySelector('[data-tool="${tool}"]').click()`);
           if (tool === 'settings') await waitFor('document.querySelectorAll(".shortcut-input").length === 6');
