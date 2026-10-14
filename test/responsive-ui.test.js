@@ -211,6 +211,30 @@ test('all twelve tool panels adapt to native resizing, narrow and wide viewports
           await evaluate('new Promise(resolve => setTimeout(resolve, 250))');
           const metrics = await evaluate(`(${measureLayout.toString()})()`);
           results[`${theme}-${width}-${height}-${tool}`] = metrics;
+          const heading = await evaluate(`(() => {
+            const visible = element => element.getClientRects().length > 0;
+            const title = document.querySelector('#pageTitle');
+            const controls = document.querySelector('#timerHeadingActions');
+            const eyebrow = document.querySelector('#timerEyebrow');
+            const view = document.querySelector('.generic-view:not([hidden])');
+            const toolbar = view?.querySelector('.section-toolbar');
+            const actions = toolbar && [...toolbar.children].filter(visible);
+            return {
+              title: title.textContent,
+              timerControlsVisible: visible(controls),
+              timerEyebrowVisible: visible(eyebrow),
+              duplicateTitles: view ? [...view.querySelectorAll('.section-toolbar h2, .focus-card h2')].filter(visible).map(element => element.textContent) : [],
+              actionCount: actions?.length || 0,
+              actionRight: actions?.length ? actions[0].getBoundingClientRect().right > toolbar.getBoundingClientRect().right - 2 : true
+            };
+          })()`);
+          assert.equal(heading.timerControlsVisible, tool === 'timer', `${tool}: timer controls belong only to timer`);
+          assert.equal(heading.timerEyebrowVisible, tool === 'timer', `${tool}: timer label belongs only to timer`);
+          assert.deepEqual(heading.duplicateTitles, [], `${tool}: page title appears only once`);
+          if (tool !== 'timer' && tool !== 'pomodoro' && !['reminders', 'qr', 'settings'].includes(tool)) {
+            assert.equal(heading.actionCount, 1, `${tool}: its own toolbar remains available`);
+            assert.equal(heading.actionRight, true, `${tool}: its own action stays right aligned`);
+          }
           assert.deepEqual(metrics.outside, [], `${tool}: elements stay inside the right panel`);
           assert.deepEqual(metrics.unreachable, [], `${tool}: controls remain reachable through scrolling`);
           assert.equal(metrics.documentOverflow || metrics.mainOverflow, false, `${tool}: no page horizontal overflow`);

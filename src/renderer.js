@@ -74,6 +74,8 @@ function selectTool(tool) {
   currentTool = tool;
   const titles = { timer: ['计时器', '把时间放在桌面上，专注当前这一件事。'], pomodoro: ['番茄钟', '用清晰的专注周期，保持节奏。'], notes: ['快速便签', '把临时想法留在桌面，稍后再处理。'], clipboard: ['剪贴板历史', '找回最近复制过的文本。'], capture: ['截图与取色', '快速截取屏幕，提取需要的颜色。'], converter: ['转换器', '常用单位与时间格式即时换算。'], reminders: ['闹钟与提醒', '把要记住的事交给桌面。'], qr: ['二维码', '生成可分享的文本二维码。'], tts: ['文本朗读', '把 TXT 和 DOCX 文件转换成语音播放。'], windowPin: ['窗口置顶', '选择一个窗口，让它始终显示在最前端。'], ports: ['端口进程', '查看 Windows 正在监听的端口、程序路径和启动命令行。'], settings: ['快捷键设置', '为常用工具配置全局快捷键。'] };
   $('pageTitle').textContent = titles[tool][0]; $('pageDescription').textContent = titles[tool][1];
+  $('timerEyebrow').hidden = tool !== 'timer';
+  $('timerHeadingActions').hidden = tool !== 'timer';
   document.querySelectorAll('[data-tool]').forEach((button) => { const active = button.dataset.tool === tool; button.classList.toggle('active', active); button.toggleAttribute('aria-current', active); });
   document.querySelectorAll('.tool-view, .generic-view').forEach((view) => { const visible = tool === 'timer' ? ['timerView', 'quickStartView'].includes(view.id) : view.id === `${tool}View`; view.hidden = !visible; });
   if (tool === 'notes') renderNotes(); if (tool === 'clipboard') renderClipboard(); if (tool === 'converter') setupConverter(); if (tool === 'windowPin') renderExternalWindows(); if (tool === 'ports') loadPorts(); if (tool === 'settings') renderShortcuts();
