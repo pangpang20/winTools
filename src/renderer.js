@@ -218,8 +218,51 @@ document.querySelectorAll('.preset-button').forEach((button) => button.addEventL
 $('minimizeButton').addEventListener('click', () => window.desktopAPI.minimize()); $('closeButton').addEventListener('click', () => window.desktopAPI.close());
 $('widgetButton').addEventListener('click', async () => { const visible = await window.desktopAPI.toggleWidget(); $('widgetButtonLabel').textContent = visible ? '关闭浮窗' : '桌面浮窗'; if (visible) renderTimer(); });
 $('newNoteButton').addEventListener('click', () => addNote(false)); $('openAllNotesButton').addEventListener('click', () => notes.forEach((note, index) => setTimeout(() => window.desktopAPI.openNoteWindow(note), index * 80))); $('clearClipboard').addEventListener('click', () => window.desktopAPI.clearClipboard()); $('clipboardSearch').addEventListener('input', renderClipboard); $('clipboardEnabled').addEventListener('change', (event) => window.desktopAPI.setClipboardEnabled(event.target.checked));
-$('captureScreenButton').addEventListener('click', async () => { const dataUrl = await window.desktopAPI.captureScreen(); if (dataUrl) $('capturePreview').innerHTML = `<img alt="屏幕截图" src="${dataUrl}">`; });
-$('colorPickerInput').addEventListener('input', (event) => { const hex = event.target.value.toUpperCase(); const rgb = hex.match(/[A-F0-9]{2}/g).map((part) => parseInt(part, 16)).join(', '); $('largeColorPreview').style.background = hex; $('hexValue').textContent = hex; $('rgbValue').textContent = rgb; });
+$('captureScreenButton').addEventListener('click', async () => {
+  const dataUrl = await window.desktopAPI.captureScreen();
+  if (!dataUrl) return;
+  const img = new Image();
+  img.onload = () => {
+    captureCanvas.width = img.naturalWidth;
+    captureCanvas.height = img.naturalHeight;
+    captureCanvas.getContext('2d').drawImage(img, 0, 0);
+    captureCanvas.hidden = false;
+    const empty = $('capturePreview').querySelector('.empty-state');
+    if (empty) empty.classList.add('hidden');
+    const rect = captureCanvas.getBoundingClientRect();
+    setLiveColor(sampleColorAt({ clientX: rect.left + rect.width / 2, clientY: rect.top + rect.height / 2 }) || '#7DD3FC');
+  };
+  img.src = dataUrl;
+});
+$('colorPickerInput').addEventListener('input', (event) => setLiveColor(event.target.value));
+
+const captureCanvas = $('captureCanvas');
+let recordedColors = JSON.parse(localStorage.getItem('zhuomiantools.captureColors') || '[]');
+function hexToRgb(hex) { const parts = hex.match(/[A-Fa-f0-9]{2}/g); return parts ? parts.map((part) => parseInt(part, 16)).join(', ') : ''; }
+function setLiveColor(hex) { hex = String(hex).toUpperCase(); $('liveColorPreview').style.background = hex; $('hexValue').textContent = hex; $('rgbValue').textContent = hexToRgb(hex); }
+function renderRecordedColors() {
+  const list = $('recordedColors');
+  list.innerHTML = recordedColors.length
+    ? recordedColors.map((hex, index) => '<li class="recorded-color"><span class="recorded-swatch" style="background:' + hex + '"></span><span class="recorded-hex">' + hex + '</span><button class="recorded-copy" type="button" data-hex="' + hex + '">复制</button></li>').join('')
+    : '<li class="recorded-empty">暂无记录</li>';
+  list.querySelectorAll('.recorded-copy').forEach((button) => button.addEventListener('click', () => window.desktopAPI.copyClipboard(button.dataset.hex).then(() => toast('颜色值已复制'))));
+  localStorage.setItem('zhuomiantools.captureColors', JSON.stringify(recordedColors));
+}
+function sampleColorAt(event) {
+  if (captureCanvas.hidden) return null;
+  const rect = captureCanvas.getBoundingClientRect();
+  const x = Math.floor((event.clientX - rect.left) * (captureCanvas.width / rect.width));
+  const y = Math.floor((event.clientY - rect.top) * (captureCanvas.height / rect.height));
+  if (x < 0 || y < 0 || x >= captureCanvas.width || y >= captureCanvas.height) return null;
+  const pixel = captureCanvas.getContext('2d').getImageData(x, y, 1, 1).data;
+  return '#' + [pixel[0], pixel[1], pixel[2]].map((value) => value.toString(16).padStart(2, '0')).join('').toUpperCase();
+}
+function recordColor(hex) { if (!hex) return; recordedColors.unshift(hex); recordedColors = recordedColors.slice(0, 30); renderRecordedColors(); }
+captureCanvas.addEventListener('mousemove', (event) => setLiveColor(sampleColorAt(event) || '#7DD3FC'));
+captureCanvas.addEventListener('click', (event) => recordColor(sampleColorAt(event)));
+$('clearColorsButton').addEventListener('click', () => { recordedColors = []; renderRecordedColors(); });
+renderRecordedColors();
+setLiveColor('#7DD3FC');
 $('converterType').addEventListener('change', setupConverter); $('converterInput').addEventListener('input', updateConversion); $('converterFrom').addEventListener('change', updateConversion); $('converterTo').addEventListener('change', updateConversion);
 $('addReminder').addEventListener('click', addReminder); $('generateQr').addEventListener('click', async () => { const text = $('qrText').value.trim(); if (!text) return toast('请输入要生成的内容'); $('qrOutput').innerHTML = `<img alt="二维码" src="${await window.desktopAPI.generateQr(text)}"><button class="utility-button" id="copyQr" type="button">复制内容</button>`; $('copyQr').addEventListener('click', () => window.desktopAPI.copyClipboard(text).then(() => toast('内容已复制'))); });
 $('openSpeechFile').addEventListener('click', async () => { const file = await window.desktopAPI.openSpeechFile(); if (!file) return; $('speechFileName').textContent = file.name; $('speechText').value = file.text; $('speechCharCount').textContent = `${file.text.length.toLocaleString()} 字`; speechLoadVoices(); }); $('speechText').addEventListener('input', () => { $('speechCharCount').textContent = `${$('speechText').value.length.toLocaleString()} 字`; });
