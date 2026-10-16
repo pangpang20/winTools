@@ -6,6 +6,7 @@ const mammoth = require('mammoth');
 const { createExternalWindowService } = require('./external-windows');
 const { findWindowSource, withWindowThumbnails } = require('./window-thumbnails');
 const { createPortService } = require('./ports');
+const { capturePrimaryScreen } = require('./screen-capture');
 
 let mainWindow;
 let widgetWindow;
@@ -98,7 +99,7 @@ function registerShortcuts(nextShortcuts = shortcuts) {
   }
   shortcuts = { ...defaultShortcuts, ...nextShortcuts }; writeData(); return { ok: true, shortcuts };
 }
-function captureScreen() { return desktopCapturer.getSources({ types: ['screen'], thumbnailSize: screen.getPrimaryDisplay().size }).then((sources) => sources[0]?.thumbnail?.toDataURL() || null); }
+function captureScreen() { return capturePrimaryScreen(desktopCapturer, screen); }
 async function listExternalWindowsWithThumbnails() {
   const windows = await externalWindows.list();
   try {
