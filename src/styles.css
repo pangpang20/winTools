@@ -100,6 +100,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
 .memory-review { color: #facc15; background: rgba(250, 204, 21, .14); }
 .memory-protected { color: #94a3b8; background: rgba(148, 163, 184, .14); }
 .memory-kill-button { min-width: 92px; justify-content: center; }
+.port-table .memory-kill-button { scroll-margin-top: 56px; }
 .port-sort-label { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 12px; }
 .port-sort-label select:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .port-help { color: var(--muted); font-size: 12px; line-height: 1.7; margin: 14px 0 10px; }
@@ -112,6 +113,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); ou
 .port-table tbody tr:hover { background: var(--panel-soft); }
 .port-table tbody tr:last-child td { border-bottom: 0; }
 .port-number { color: var(--accent); font-family: 'DM Mono', monospace; font-weight: 600; }
+.memory-number { color: var(--accent); font-family: 'DM Mono', monospace; font-weight: 600; }
 .port-path, .port-command-line { color: var(--muted); user-select: text; }
 .port-command-line { white-space: pre-wrap; }
 .port-table-wrap:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }

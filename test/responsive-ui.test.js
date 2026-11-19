@@ -178,11 +178,11 @@ function measureLayout() {
   };
 }
 
-test('all twelve tool panels adapt to native resizing, narrow and wide viewports in five themes', { skip: process.platform !== 'win32', timeout: 300000 }, async t => {
+test('all thirteen tool panels adapt to native resizing, narrow and wide viewports in five themes', { skip: process.platform !== 'win32', timeout: 300000 }, async t => {
   const { call, evaluate, waitFor, resizeNative } = await openToolbox(t);
   await evaluate(`(${installFixtures.toString()})()`);
   const tools = await evaluate("[...document.querySelectorAll('[data-tool]')].map(button => button.dataset.tool)");
-  assert.equal(tools.length, 12);
+  assert.equal(tools.length, 13);
   await t.test('the native window can resize to 640 by 480 and keeps all navigation reachable', async () => {
     resizeNative(640, 480);
     await waitFor('innerWidth === 640 && innerHeight === 480');
