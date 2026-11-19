@@ -6,6 +6,7 @@ const mammoth = require('mammoth');
 const { createExternalWindowService } = require('./external-windows');
 const { findWindowSource, withWindowThumbnails } = require('./window-thumbnails');
 const { createPortService } = require('./ports');
+const { createMemoryCleanerService } = require('./memory-cleaner');
 const { capturePrimaryScreen } = require('./screen-capture');
 
 let mainWindow;
@@ -19,6 +20,7 @@ let clipboardHistory = [];
 const reminderTimers = new Map();
 const externalWindows = createExternalWindowService();
 const ports = createPortService();
+const memoryCleaner = createMemoryCleanerService();
 const defaultShortcuts = { showToolbox: 'Control+Alt+Space', startTimer: 'Control+Alt+T', newNote: 'Control+Alt+N', openClipboard: 'Control+Alt+V', screenshot: 'Control+Alt+A', colorPicker: 'Control+Alt+C' };
 let shortcuts = { ...defaultShortcuts };
 
@@ -140,6 +142,9 @@ ipcMain.handle('ports:list', async () => {
   }
   return ports.list();
 });
+
+ipcMain.handle('memory:scan', () => memoryCleaner.scan());
+ipcMain.handle('memory:kill', (_event, processId) => memoryCleaner.kill(Number(processId)));
 
 ipcMain.handle('widget:toggle', () => {
   if (widgetWindow) { widgetWindow.close(); return false; }

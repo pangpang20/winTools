@@ -16,6 +16,10 @@ let portItems = [];
 let portsLoading = false;
 let portsError = '';
 let portsUpdatedAt = '';
+let memoryItems = [];
+let memoryLoading = false;
+let memoryError = '';
+let memoryUpdatedAt = '';
 
 const $ = (id) => document.getElementById(id);
 const timerDisplay = $('timerDisplay');
@@ -72,13 +76,13 @@ function switchMode(mode) { if (state.running) setRunning(false); state.mode = m
 
 function selectTool(tool) {
   currentTool = tool;
-  const titles = { timer: ['计时器', '把时间放在桌面上，专注当前这一件事。'], pomodoro: ['番茄钟', '用清晰的专注周期，保持节奏。'], notes: ['快速便签', '把临时想法留在桌面，稍后再处理。'], clipboard: ['剪贴板历史', '找回最近复制过的文本。'], capture: ['截图与取色', '快速截取屏幕，提取需要的颜色。'], converter: ['转换器', '常用单位与时间格式即时换算。'], reminders: ['闹钟与提醒', '把要记住的事交给桌面。'], qr: ['二维码', '生成可分享的文本二维码。'], tts: ['文本朗读', '把 TXT 和 DOCX 文件转换成语音播放。'], windowPin: ['窗口置顶', '选择一个窗口，让它始终显示在最前端。'], ports: ['端口进程', '查看 Windows 正在监听的端口、程序路径和启动命令行。'], settings: ['快捷键设置', '为常用工具配置全局快捷键。'] };
+  const titles = { timer: ['计时器', '把时间放在桌面上，专注当前这一件事。'], pomodoro: ['番茄钟', '用清晰的专注周期，保持节奏。'], notes: ['快速便签', '把临时想法留在桌面，稍后再处理。'], clipboard: ['剪贴板历史', '找回最近复制过的文本。'], capture: ['截图与取色', '快速截取屏幕，提取需要的颜色。'], converter: ['转换器', '常用单位与时间格式即时换算。'], reminders: ['闹钟与提醒', '把要记住的事交给桌面。'], qr: ['二维码', '生成可分享的文本二维码。'], tts: ['文本朗读', '把 TXT 和 DOCX 文件转换成语音播放。'], windowPin: ['窗口置顶', '选择一个窗口，让它始终显示在最前端。'], ports: ['端口进程', '查看 Windows 正在监听的端口、程序路径和启动命令行。'], memory: ['内存清理', '扫描进程内存占用，分类标记可安全停止的项目。'], settings: ['快捷键设置', '为常用工具配置全局快捷键。'] };
   $('pageTitle').textContent = titles[tool][0]; $('pageDescription').textContent = titles[tool][1];
   $('timerEyebrow').hidden = tool !== 'timer';
   $('timerHeadingActions').hidden = tool !== 'timer';
   document.querySelectorAll('[data-tool]').forEach((button) => { const active = button.dataset.tool === tool; button.classList.toggle('active', active); button.toggleAttribute('aria-current', active); });
   document.querySelectorAll('.tool-view, .generic-view').forEach((view) => { const visible = tool === 'timer' ? ['timerView', 'quickStartView'].includes(view.id) : view.id === `${tool}View`; view.hidden = !visible; });
-  if (tool === 'notes') renderNotes(); if (tool === 'clipboard') renderClipboard(); if (tool === 'converter') setupConverter(); if (tool === 'windowPin') renderExternalWindows(); if (tool === 'ports') loadPorts(); if (tool === 'settings') renderShortcuts();
+  if (tool === 'notes') renderNotes(); if (tool === 'clipboard') renderClipboard(); if (tool === 'converter') setupConverter(); if (tool === 'windowPin') renderExternalWindows(); if (tool === 'ports') loadPorts(); if (tool === 'memory') loadMemory(); if (tool === 'settings') renderShortcuts();
 }
 
 function renderPorts() {
@@ -110,6 +114,74 @@ function showPortMessage(message, error = false) {
   const cell = document.createElement('td');
   cell.colSpan = 8; cell.className = error ? 'port-empty port-error' : 'port-empty'; cell.textContent = message;
   row.appendChild(cell); $('portList').appendChild(row);
+}
+
+function formatMemory(bytes) { return bytes >= 1024 * 1024 * 1024 ? `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GB` : bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.max(0, Math.floor(bytes / 1024))} KB`; }
+
+function renderMemory() {
+  const list = $('memoryList');
+  list.replaceChildren();
+  $('memoryTableWrap').setAttribute('aria-busy', String(memoryLoading));
+  if (memoryLoading || memoryError) {
+    const message = memoryLoading ? '正在获取进程内存占用，请稍候…' : `${memoryError}。请点击“重新扫描”重试。`;
+    $('memoryStatus').textContent = memoryLoading ? '正在扫描…' : '获取失败';
+    showMemoryMessage(message, Boolean(memoryError));
+    return;
+  }
+  const query = $('memorySearch').value.trim().toLowerCase();
+  const items = memoryItems.filter((item) => !query || item.processName.toLowerCase().includes(query));
+  const safeBytes = memoryItems.filter((item) => item.level === 'safe').reduce((sum, item) => sum + item.memoryBytes, 0);
+  $('memoryStatus').textContent = `显示 ${items.length} / ${memoryItems.length} 组进程 · 可释放约 ${formatMemory(safeBytes)}${memoryUpdatedAt ? ` · 更新于 ${memoryUpdatedAt}` : ''}`;
+  if (!items.length) { showMemoryMessage(query ? '没有匹配的进程，请修改或清空搜索内容。' : '未发现可评估的进程。'); return; }
+  for (const item of items) {
+    const row = document.createElement('tr');
+    const badge = document.createElement('td');
+    const span = document.createElement('span');
+    span.className = `memory-badge memory-${item.level}`;
+    span.textContent = item.label;
+    badge.appendChild(span);
+    row.appendChild(badge);
+    const nameCell = document.createElement('td'); nameCell.textContent = item.processName; row.appendChild(nameCell);
+    const memoryCell = document.createElement('td'); memoryCell.className = 'port-number'; memoryCell.textContent = formatMemory(item.memoryBytes); row.appendChild(memoryCell);
+    const countCell = document.createElement('td'); countCell.className = 'port-number'; countCell.textContent = String(item.instances.length); row.appendChild(countCell);
+    const reasonCell = document.createElement('td'); reasonCell.textContent = item.reason; reasonCell.title = item.reason; row.appendChild(reasonCell);
+    const actionCell = document.createElement('td');
+    if (item.level !== 'protected') {
+      const action = document.createElement('button');
+      action.className = item.level === 'safe' ? 'primary-button memory-kill-button' : 'utility-button memory-kill-button';
+      action.type = 'button'; action.textContent = '结束进程';
+      action.setAttribute('aria-label', `结束 ${item.processName}`);
+      action.addEventListener('click', async () => {
+        if (!window.confirm(`将结束 ${item.processName} 的 ${item.instances.length} 个实例，释放约 ${formatMemory(item.memoryBytes)}。是否继续？`)) return;
+        action.disabled = true;
+        try { await Promise.all(item.instances.map((pid) => window.desktopAPI.killProcess(pid))); toast(`已结束 ${item.processName}`); loadMemory(); }
+        catch (error) { toast(error.message || '结束进程失败'); action.disabled = false; }
+      });
+      actionCell.appendChild(action);
+    }
+    row.appendChild(actionCell);
+    list.appendChild(row);
+  }
+}
+
+function showMemoryMessage(message, error = false) {
+  const row = document.createElement('tr');
+  const cell = document.createElement('td');
+  cell.colSpan = 6; cell.className = error ? 'port-empty port-error' : 'port-empty'; cell.textContent = message;
+  row.appendChild(cell); $('memoryList').appendChild(row);
+}
+
+async function loadMemory() {
+  if (memoryLoading) return;
+  const refresh = $('refreshMemory');
+  memoryLoading = true; memoryError = ''; refresh.disabled = true; renderMemory();
+  try {
+    const result = await window.desktopAPI.scanMemory();
+    memoryItems = result.results;
+    memoryUpdatedAt = new Date().toLocaleTimeString();
+  } catch (error) {
+    memoryItems = []; memoryError = error.message || '内存扫描失败';
+  } finally { memoryLoading = false; refresh.disabled = false; renderMemory(); }
 }
 
 async function loadPorts() {
@@ -203,6 +275,8 @@ function pomodoroTick(timestamp) { if (!pomodoroRunning) return; if (!pomodoroLa
 document.querySelectorAll('[data-tool]').forEach((button) => button.addEventListener('click', () => selectTool(button.dataset.tool)));
 $('refreshWindowList').addEventListener('click', renderExternalWindows);
 $('refreshPorts').addEventListener('click', loadPorts);
+$('refreshMemory').addEventListener('click', loadMemory);
+$('memorySearch').addEventListener('input', renderMemory);
 $('portSearch').addEventListener('input', renderPorts);
 $('portSort').addEventListener('change', renderPorts);
 $('closeWindowPreview').addEventListener('click', () => $('windowPreviewDialog').close());

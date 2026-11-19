@@ -55,6 +55,7 @@
             <button class="tool-nav-item" type="button" data-tool="tts"><span class="nav-icon timer-icon" aria-hidden="true"></span><span class="nav-label">文本朗读</span></button>
             <button class="tool-nav-item" type="button" data-tool="windowPin"><span class="nav-icon grid-icon" aria-hidden="true"></span><span class="nav-label">窗口置顶</span></button>
             <button class="tool-nav-item" type="button" data-tool="ports"><span class="nav-icon grid-icon" aria-hidden="true"></span><span class="nav-label">端口进程</span></button>
+            <button class="tool-nav-item" type="button" data-tool="memory"><span class="nav-icon grid-icon" aria-hidden="true"></span><span class="nav-label">内存清理</span></button>
             <button class="tool-nav-item" type="button" data-tool="settings"><span class="nav-icon grid-icon" aria-hidden="true"></span><span class="nav-label">快捷键设置</span></button>
           </nav>
 
@@ -88,6 +89,15 @@
                 <span id="startButtonLabel">开始计时</span>
               </button>
             </div>
+          </section>
+          <section class="generic-view" id="memoryView" hidden>
+            <div class="section-toolbar"><div><p class="eyebrow">MEMORY CLEANER</p><h2>内存清理</h2></div><button class="utility-button" id="refreshMemory" type="button">重新扫描</button></div>
+            <p class="port-help" id="memoryHelp">按当前内存占用扫描全部进程，系统关键进程与桌面工具箱自身会被标记为不可结束。浏览器、聊天、办公和网盘等空闲进程会标记为可安全停止，其他进程需人工确认后才允许结束。</p>
+            <div class="ports-toolbar">
+              <div class="search-field"><span aria-hidden="true">⌕</span><input id="memorySearch" type="search" placeholder="按进程名称搜索" aria-label="按进程名称搜索"></div>
+            </div>
+            <div class="port-status" id="memoryStatus" role="status" aria-live="polite"></div>
+            <div class="port-table-wrap" id="memoryTableWrap" aria-busy="false" tabindex="0" aria-label="内存占用进程列表，可左右滚动"><table class="port-table" aria-label="内存占用进程与安全分级"><thead><tr><th scope="col">风险等级</th><th scope="col">进程</th><th scope="col">内存占用</th><th scope="col">实例数</th><th scope="col">说明</th><th scope="col">操作</th></tr></thead><tbody id="memoryList"></tbody></table></div>
           </section>
 
           <section class="timer-layout tool-view" id="timerView" aria-label="计时器工作区">

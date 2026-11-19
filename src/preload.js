@@ -8,6 +8,8 @@ contextBridge.exposeInMainWorld('desktopAPI', {
   previewExternalWindow: (handle) => ipcRenderer.invoke('external-windows:preview', handle),
   toggleExternalWindowPin: (handle, enabled) => ipcRenderer.invoke('external-windows:toggle-pin', { handle, enabled }),
   listPorts: () => ipcRenderer.invoke('ports:list'),
+  scanMemory: () => ipcRenderer.invoke('memory:scan'),
+  killProcess: (processId) => ipcRenderer.invoke('memory:kill', processId),
   minimize: () => ipcRenderer.send('window:minimize'),
   close: () => ipcRenderer.send('window:close'),
   toggleWidget: () => ipcRenderer.invoke('widget:toggle'),
