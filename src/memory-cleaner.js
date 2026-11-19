@@ -3,8 +3,33 @@ const { execFile } = require('node:child_process');
 const scanScript = String.raw`
 $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false)
+Add-Type @'
+using System;
+using System.Text;
+using System.Runtime.InteropServices;
+public class WindowProbe {
+  private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+  [DllImport("user32.dll")] private static extern bool EnumWindows(EnumWindowsProc callback, IntPtr extra);
+  [DllImport("user32.dll")] private static extern bool IsWindowVisible(IntPtr hWnd);
+  [DllImport("user32.dll", CharSet=CharSet.Unicode)] private static extern int GetWindowText(IntPtr hWnd, StringBuilder text, int count);
+  [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
+  public static System.Collections.Generic.HashSet<int> PidsWithWindows() {
+    var result = new System.Collections.Generic.HashSet<int>();
+    EnumWindows((hWnd, extra) => {
+      if (!IsWindowVisible(hWnd)) return true;
+      var title = new StringBuilder(256); GetWindowText(hWnd, title, title.Capacity);
+      if (String.IsNullOrWhiteSpace(title.ToString().Trim())) return true;
+      uint pid; GetWindowThreadProcessId(hWnd, out pid);
+      if (pid != 0) result.Add((int)pid);
+      return true;
+    }, IntPtr.Zero);
+    return result;
+  }
+}
+'@
+$windows = [WindowProbe]::PidsWithWindows()
 Get-CimInstance -ClassName Win32_Process -Property ProcessId,Name,WorkingSetSize |
-  Select-Object -Property ProcessId,Name,WorkingSetSize |
+  ForEach-Object { [pscustomobject]@{ ProcessId=$_.ProcessId; Name=$_.Name; WorkingSetSize=$_.WorkingSetSize; HasWindow=$windows.Contains([int]$_.ProcessId) } } |
   ConvertTo-Json -Compress -Depth 2
 `;
 
@@ -37,7 +62,7 @@ function parseProcessOutput(output) {
       const processId = Number.isInteger(item?.ProcessId) && item.ProcessId > 0 ? item.ProcessId : null;
       const workingSetSize = Number(item?.WorkingSetSize);
       if (!processId || !Number.isFinite(workingSetSize) || workingSetSize < 0) return null;
-      return { processId, processName: String(item?.Name || '未知进程'), memoryBytes: Math.floor(workingSetSize) };
+      return { processId, processName: String(item?.Name || '未知进程'), memoryBytes: Math.floor(workingSetSize), hasWindow: Boolean(item?.HasWindow) };
     })
     .filter(Boolean);
 }
@@ -56,10 +81,12 @@ function classifyProcess(item) {
   if (/^explorer\.exe$/.test(lower)) return { level: 'protected', label: '桌面进程', reason: 'Explorer 提供桌面和任务栏，结束会黑屏' };
   if (/^zhuomiantools\.exe$|^electron\.exe$/.test(lower)) return { level: 'protected', label: '当前应用', reason: '桌面工具箱自身进程，不能自行结束' };
   if (/^taskmgr\.exe$|^procexp\.exe$|^procmon\.exe$|^perfmon\.exe$/.test(lower)) return { level: 'protected', label: '系统监控工具', reason: '正在监视系统状态，结束会影响诊断' };
+  if (item.hasWindow === false) return { level: 'safe', label: '后台驻留', reason: '当前没有打开的窗口，通常是关闭应用后残留的后台进程' };
   for (const hint of SAFE_HINTS) {
     if (hint.pattern.test(name)) return { level: 'safe', label: '可安全停止', reason: hint.reason };
   }
-  return { level: 'review', label: '建议人工确认', reason: '非系统进程，请确认用途后再停止' };
+  if (item.hasWindow === false) return { level: 'safe', label: '后台驻留', reason: '当前没有打开的窗口，通常是关闭应用后残留的后台进程' };
+  return { level: 'review', label: '建议人工确认', reason: '进程有可见窗口或用途未知，请确认后再停止' };
 }
 
 function buildScanResult(rows) {

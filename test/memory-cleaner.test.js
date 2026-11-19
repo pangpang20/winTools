@@ -6,8 +6,8 @@ const sample = { ProcessId: 42, Name: '测试进程.exe', WorkingSetSize: 1024 *
 
 test('parses single rows, arrays and drops invalid entries', () => {
   const expected = { processId: 42, processName: '测试进程.exe', memoryBytes: 1048576 };
-  assert.deepEqual(parseProcessOutput(JSON.stringify(sample)), [expected]);
-  assert.deepEqual(parseProcessOutput(JSON.stringify([sample, { ...sample, ProcessId: 0 }, { ...sample, WorkingSetSize: 'abc' }, null])), [expected]);
+  assert.deepEqual(parseProcessOutput(JSON.stringify(sample)), [{ ...expected, hasWindow: false }]);
+  assert.deepEqual(parseProcessOutput(JSON.stringify([sample, { ...sample, ProcessId: 0 }, { ...sample, WorkingSetSize: 'abc' }, null])), [{ ...expected, hasWindow: false }]);
   assert.deepEqual(parseProcessOutput(''), []);
   assert.throws(() => parseProcessOutput('not JSON'), /无效数据/);
 });
@@ -16,17 +16,18 @@ test('classifies system, app and safe processes with reasons', () => {
   assert.deepEqual(classifyProcess({ processName: 'svchost.exe', processId: 1, memoryBytes: 1 }), { level: 'protected', label: '系统关键进程', reason: 'Windows 核心组件，结束可能导致系统不稳定' });
   assert.deepEqual(classifyProcess({ processName: 'explorer.exe', processId: 2, memoryBytes: 1 }), { level: 'protected', label: '桌面进程', reason: 'Explorer 提供桌面和任务栏，结束会黑屏' });
   assert.deepEqual(classifyProcess({ processName: 'zhuomiantools.exe', processId: 3, memoryBytes: 1 }), { level: 'protected', label: '当前应用', reason: '桌面工具箱自身进程，不能自行结束' });
-  assert.deepEqual(classifyProcess({ processName: 'WeChatAppEx.exe', processId: 4, memoryBytes: 1 }), { level: 'safe', label: '可安全停止', reason: '聊天、办公或浏览器进程，空闲时内存占用较高' });
-  assert.deepEqual(classifyProcess({ processName: 'Steam.exe', processId: 5, memoryBytes: 1 }), { level: 'safe', label: '可安全停止', reason: '下载、网盘或客户端常驻进程，通常可暂停' });
-  assert.deepEqual(classifyProcess({ processName: 'my-tool.exe', processId: 6, memoryBytes: 1 }), { level: 'review', label: '建议人工确认', reason: '非系统进程，请确认用途后再停止' });
+  assert.deepEqual(classifyProcess({ processName: 'WeChatAppEx.exe', processId: 4, memoryBytes: 1, hasWindow: true }), { level: 'safe', label: '可安全停止', reason: '聊天、办公或浏览器进程，空闲时内存占用较高' });
+  assert.deepEqual(classifyProcess({ processName: 'Steam.exe', processId: 5, memoryBytes: 1, hasWindow: true }), { level: 'safe', label: '可安全停止', reason: '下载、网盘或客户端常驻进程，通常可暂停' });
+  assert.deepEqual(classifyProcess({ processName: 'DingTalkDoc.exe', processId: 7, memoryBytes: 1, hasWindow: false }), { level: 'safe', label: '后台驻留', reason: '当前没有打开的窗口，通常是关闭应用后残留的后台进程' });
+  assert.deepEqual(classifyProcess({ processName: 'DingTalkDoc.exe', processId: 7, memoryBytes: 1, hasWindow: false }), { level: 'safe', label: '后台驻留', reason: '当前没有打开的窗口，通常是关闭应用后残留的后台进程' });
 });
 
 test('groups duplicate names, sorts by risk then memory and summarizes', () => {
   const rows = [
-    { processId: 1, processName: 'WeChatAppEx.exe', memoryBytes: 200 },
+    { processId: 1, processName: 'WeChatAppEx.exe', memoryBytes: 200, hasWindow: true },
     { processId: 2, processName: 'WeChatAppEx.exe', memoryBytes: 100 },
-    { processId: 3, processName: 'svchost.exe', memoryBytes: 3000 },
-    { processId: 4, processName: 'custom-tool.exe', memoryBytes: 1500 }
+    { processId: 3, processName: 'svchost.exe', memoryBytes: 3000, hasWindow: true },
+    { processId: 4, processName: 'custom-tool.exe', memoryBytes: 1500, hasWindow: true }
   ];
   const { results, summary } = buildScanResult(rows);
   assert.equal(results.length, 3);

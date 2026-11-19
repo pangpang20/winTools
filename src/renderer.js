@@ -143,7 +143,8 @@ function renderMemory() {
     row.appendChild(badge);
     const nameCell = document.createElement('td'); nameCell.textContent = item.processName; row.appendChild(nameCell);
     const memoryCell = document.createElement('td'); memoryCell.className = 'memory-number'; memoryCell.textContent = formatMemory(item.memoryBytes); row.appendChild(memoryCell);
-    const countCell = document.createElement('td'); countCell.className = 'memory-number'; countCell.textContent = String(item.instances.length); row.appendChild(countCell);
+    const visibleCount = item.instances.filter((instance) => instance.hasWindow).length;
+    const countCell = document.createElement('td'); countCell.className = 'memory-number'; countCell.textContent = `${item.instances.length} / ${visibleCount}`; row.appendChild(countCell);
     const reasonCell = document.createElement('td'); reasonCell.textContent = item.reason; reasonCell.title = item.reason; row.appendChild(reasonCell);
     const actionCell = document.createElement('td');
     if (item.level !== 'protected') {
