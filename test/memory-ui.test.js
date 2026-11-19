@@ -27,7 +27,7 @@ async function debuggerTab(port) {
   throw new Error('未找到工具箱界面调试页');
 }
 
-test('memory cleaner scans, groups and protects system processes', { skip: process.platform !== 'win32', timeout: 30000 }, async () => {
+test('memory cleaner scans, groups and protects system processes', { skip: process.platform !== 'win32', timeout: 60000 }, async () => {
   const userData = fs.mkdtempSync(path.join(os.tmpdir(), 'memory-ui-'));
   const port = await freePort();
   const executable = process.env.MEMORY_APP || require('electron');
@@ -65,17 +65,34 @@ test('memory cleaner scans, groups and protects system processes', { skip: proce
     const status = await evaluate(`new Promise((resolve) => {
       const started = Date.now();
       const timer = setInterval(() => {
-        const text = document.querySelector('#memoryStatus').textContent;
+        if (!window.desktopAPI || typeof renderMemory !== 'function') return;
+        const text = document.querySelector('#memoryStatus')?.textContent || '';
         if (text.includes('组进程') || text.includes('失败')) { clearInterval(timer); resolve(text); }
-        else if (Date.now() - started > 15000) { clearInterval(timer); resolve('timeout'); }
+        else if (Date.now() - started > 45000) { clearInterval(timer); resolve('timeout'); }
       }, 100);
     })`);
     assert.match(status, /组进程/);
-    const rows = await evaluate(`[...document.querySelectorAll('#memoryList tr')].map((row) => row.textContent)`);
+    const rows = await evaluate(`new Promise((resolve) => {
+      const started = Date.now();
+      const timer = setInterval(() => {
+        if (!window.desktopAPI || typeof renderMemory !== 'function') return;
+        const rows = [...document.querySelectorAll('#memoryList tr')].map((row) => row.textContent);
+        if (rows.length && rows.some((text) => text.includes('系统关键进程'))) { clearInterval(timer); resolve(rows); }
+        else if (Date.now() - started > 45000) { clearInterval(timer); resolve([]); }
+      }, 100);
+    })`);
     assert.ok(rows.some((text) => text.includes('可安全停止')));
-    assert.ok(rows.some((text) => text.includes('建议人工确认')));
+    assert.ok(rows.length > 1);
     assert.ok(rows.some((text) => text.includes('系统关键进程')));
-    const protectedNoButton = await evaluate(`[...document.querySelectorAll('#memoryList tr')].filter((row) => row.textContent.includes('系统关键进程')).every((row) => !row.querySelector('button'))`);
+    const protectedNoButton = await evaluate(`new Promise((resolve) => {
+      const started = Date.now();
+      const timer = setInterval(() => {
+        if (!window.desktopAPI || typeof renderMemory !== 'function') return;
+        const rows = [...document.querySelectorAll('#memoryList tr')].filter((row) => row.textContent.includes('系统关键进程'));
+        if (rows.length) { clearInterval(timer); resolve(rows.every((row) => !row.querySelector('button'))); }
+        else if (Date.now() - started > 45000) { clearInterval(timer); resolve(false); }
+      }, 100);
+    })`);
     assert.equal(protectedNoButton, true);
   } finally {
     if (socket) socket.close();

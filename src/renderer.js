@@ -141,7 +141,9 @@ function renderMemory() {
     span.textContent = item.label;
     badge.appendChild(span);
     row.appendChild(badge);
-    const nameCell = document.createElement('td'); nameCell.textContent = item.processName; row.appendChild(nameCell);
+    const nameCell = document.createElement('td'); nameCell.textContent = item.processName; if (item.descriptions?.length) { nameCell.title = item.descriptions.join('、'); const desc = document.createElement('span'); desc.className = 'memory-description'; desc.textContent = ` · ${item.descriptions.join('、')}`; nameCell.appendChild(desc); } row.appendChild(nameCell);
+    const userCell = document.createElement('td'); userCell.textContent = item.users?.join('、') || '—'; row.appendChild(userCell);
+    const pidCell = document.createElement('td'); pidCell.className = 'memory-number'; pidCell.textContent = item.instances.map((instance) => instance.processId).join('、'); row.appendChild(pidCell);
     const memoryCell = document.createElement('td'); memoryCell.className = 'memory-number'; memoryCell.textContent = formatMemory(item.memoryBytes); row.appendChild(memoryCell);
     const visibleCount = item.instances.filter((instance) => instance.hasWindow).length;
     const countCell = document.createElement('td'); countCell.className = 'memory-number'; countCell.textContent = `${item.instances.length} / ${visibleCount}`; row.appendChild(countCell);
@@ -168,7 +170,7 @@ function renderMemory() {
 function showMemoryMessage(message, error = false) {
   const row = document.createElement('tr');
   const cell = document.createElement('td');
-  cell.colSpan = 6; cell.className = error ? 'port-empty port-error' : 'port-empty'; cell.textContent = message;
+  cell.colSpan = 8; cell.className = error ? 'port-empty port-error' : 'port-empty'; cell.textContent = message;
   row.appendChild(cell); $('memoryList').appendChild(row);
 }
 

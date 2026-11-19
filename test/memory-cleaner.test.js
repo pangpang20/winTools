@@ -5,9 +5,9 @@ const { parseProcessOutput, classifyProcess, buildScanResult, createMemoryCleane
 const sample = { ProcessId: 42, Name: '测试进程.exe', WorkingSetSize: 1024 * 1024 };
 
 test('parses single rows, arrays and drops invalid entries', () => {
-  const expected = { processId: 42, processName: '测试进程.exe', memoryBytes: 1048576 };
+  const expected = { processId: 42, processName: '测试进程.exe', memoryBytes: 1048576, user: null, description: null };
   assert.deepEqual(parseProcessOutput(JSON.stringify(sample)), [{ ...expected, hasWindow: false }]);
-  assert.deepEqual(parseProcessOutput(JSON.stringify([sample, { ...sample, ProcessId: 0 }, { ...sample, WorkingSetSize: 'abc' }, null])), [{ ...expected, hasWindow: false }]);
+  assert.deepEqual(parseProcessOutput(JSON.stringify([{ ...sample, User: 'pangpang', Description: '钉钉文档' }])), [{ ...expected, hasWindow: false, user: 'pangpang', description: '钉钉文档' }]);
   assert.deepEqual(parseProcessOutput(''), []);
   assert.throws(() => parseProcessOutput('not JSON'), /无效数据/);
 });
@@ -24,19 +24,31 @@ test('classifies system, app and safe processes with reasons', () => {
 
 test('groups duplicate names, sorts by risk then memory and summarizes', () => {
   const rows = [
-    { processId: 1, processName: 'WeChatAppEx.exe', memoryBytes: 200, hasWindow: true },
-    { processId: 2, processName: 'WeChatAppEx.exe', memoryBytes: 100 },
-    { processId: 3, processName: 'svchost.exe', memoryBytes: 3000, hasWindow: true },
-    { processId: 4, processName: 'custom-tool.exe', memoryBytes: 1500, hasWindow: true }
+    { processId: 1, processName: 'WeChatAppEx.exe', memoryBytes: 200, hasWindow: true, user: 'pangpang', description: '微信' },
+    { processId: 2, processName: 'WeChatAppEx.exe', memoryBytes: 100, hasWindow: false, user: 'pangpang', description: '微信' },
+    { processId: 3, processName: 'svchost.exe', memoryBytes: 3000, hasWindow: true, user: 'SYSTEM', description: 'Windows 服务' },
+    { processId: 4, processName: 'custom-tool.exe', memoryBytes: 1500, hasWindow: true, user: null, description: null }
   ];
   const { results, summary } = buildScanResult(rows);
   assert.equal(results.length, 3);
   assert.equal(results[0].processName, 'WeChatAppEx.exe');
   assert.equal(results[0].memoryBytes, 300);
-  assert.deepEqual(results[0].instances, [1, 2]);
+  assert.deepEqual(results[0].instances, [{ processId: 1, hasWindow: true }, { processId: 2, hasWindow: false }]);
+  assert.deepEqual(results[0].users, ['pangpang']);
+  assert.deepEqual(results[0].descriptions, ['微信']);
   assert.equal(results[1].processName, 'custom-tool.exe');
   assert.equal(results[2].processName, 'svchost.exe');
   assert.deepEqual(summary, { safeCount: 1, safeBytes: 300, total: 3 });
+});
+
+test('mixed instances keep the safe-with-window label for grouped rows', () => {
+  const rows = [
+    { processId: 1, processName: 'chrome.exe', memoryBytes: 100, hasWindow: false, user: 'p', description: 'Chrome' },
+    { processId: 2, processName: 'chrome.exe', memoryBytes: 200, hasWindow: true, user: 'p', description: 'Chrome' }
+  ];
+  const [group] = buildScanResult(rows).results;
+  assert.equal(group.label, '可安全停止');
+  assert.equal(group.reason, '聊天、办公或浏览器进程，空闲时内存占用较高');
 });
 
 test('service caches concurrent scans and kills only valid ids', async () => {

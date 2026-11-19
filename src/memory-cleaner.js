@@ -28,16 +28,25 @@ public class WindowProbe {
 }
 '@
 $windows = [WindowProbe]::PidsWithWindows()
-Get-CimInstance -ClassName Win32_Process -Property ProcessId,Name,WorkingSetSize |
-  ForEach-Object { [pscustomobject]@{ ProcessId=$_.ProcessId; Name=$_.Name; WorkingSetSize=$_.WorkingSetSize; HasWindow=$windows.Contains([int]$_.ProcessId) } } |
-  ConvertTo-Json -Compress -Depth 2
+$processes = Get-Process | Select-Object Id,ProcessName,WorkingSet,Description
+$ownerMap = @{}
+tasklist /v /fo csv /nh | ConvertFrom-Csv -Header @('Image','Pid','Session','SessionNum','Memory','Status','User','Cpu','Window') | ForEach-Object {
+  $user = $_.User
+  if ($user -eq '暂缺' -or $user -eq 'N/A' -or [string]::IsNullOrWhiteSpace($user)) { $user = $null }
+  $ownerMap[[int]$_.Pid] = $user
+}
+$processes | ForEach-Object {
+  $description = $_.Description
+  if ([string]::IsNullOrWhiteSpace($description)) { $description = $null }
+  [pscustomobject]@{ ProcessId=$_.Id; Name=$_.ProcessName; WorkingSetSize=[long]$_.WorkingSet; HasWindow=$windows.Contains([int]$_.Id); User=$ownerMap[$_.Id]; Description=$description }
+} | ConvertTo-Json -Compress -Depth 2
 `;
 
 function encodedArgs(script) { return ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-EncodedCommand', Buffer.from(script, 'utf16le').toString('base64')]; }
 
 function runScan(script = scanScript) {
   return new Promise((resolve, reject) => {
-    execFile('powershell.exe', encodedArgs(script), { windowsHide: true, maxBuffer: 16 * 1024 * 1024, timeout: 15000 }, (error, stdout, stderr) => {
+    execFile('powershell.exe', encodedArgs(script), { windowsHide: true, maxBuffer: 16 * 1024 * 1024, timeout: 30000 }, (error, stdout, stderr) => {
       if (error) { reject(new Error(error.killed ? '内存扫描超时，请刷新重试' : `内存扫描失败：${stderr.trim() || error.message}`)); return; }
       resolve(stdout.trim());
     });
@@ -62,7 +71,14 @@ function parseProcessOutput(output) {
       const processId = Number.isInteger(item?.ProcessId) && item.ProcessId > 0 ? item.ProcessId : null;
       const workingSetSize = Number(item?.WorkingSetSize);
       if (!processId || !Number.isFinite(workingSetSize) || workingSetSize < 0) return null;
-      return { processId, processName: String(item?.Name || '未知进程'), memoryBytes: Math.floor(workingSetSize), hasWindow: Boolean(item?.HasWindow) };
+      return {
+        processId,
+        processName: String(item?.Name || '未知进程'),
+        memoryBytes: Math.floor(workingSetSize),
+        hasWindow: Boolean(item?.HasWindow),
+        user: typeof item?.User === 'string' && item.User.trim() ? item.User : null,
+        description: typeof item?.Description === 'string' && item.Description.trim() ? item.Description : null
+      };
     })
     .filter(Boolean);
 }
@@ -94,8 +110,22 @@ function buildScanResult(rows) {
   for (const row of rows) {
     const item = { ...classifyProcess(row), ...row };
     const existing = grouped.get(item.processName);
-    if (existing) { existing.memoryBytes += item.memoryBytes; existing.instances.push(item.processId); continue; }
-    grouped.set(item.processName, { ...item, instances: [item.processId] });
+    if (existing) {
+      existing.memoryBytes += item.memoryBytes;
+      existing.instances.push({ processId: item.processId, hasWindow: item.hasWindow });
+      if (item.user && !existing.users.includes(item.user)) existing.users.push(item.user);
+      if (item.description && !existing.descriptions.includes(item.description)) existing.descriptions.push(item.description);
+      if (item.level === 'safe' && item.hasWindow && !existing.safeReason) existing.safeReason = item.reason;
+      continue;
+    }
+    grouped.set(item.processName, { ...item, instances: [{ processId: item.processId, hasWindow: item.hasWindow }], users: item.user ? [item.user] : [], descriptions: item.description ? [item.description] : [], safeReason: item.level === 'safe' && item.hasWindow ? item.reason : null });
+  }
+  for (const group of grouped.values()) {
+    if (group.level === 'safe' && group.instances.some((instance) => instance.hasWindow)) {
+      group.label = '可安全停止';
+      if (group.safeReason) group.reason = group.safeReason;
+    }
+    delete group.safeReason;
   }
   const levelOrder = { safe: 0, review: 1, protected: 2 };
   const results = [...grouped.values()].sort((a, b) => levelOrder[a.level] - levelOrder[b.level] || b.memoryBytes - a.memoryBytes);
